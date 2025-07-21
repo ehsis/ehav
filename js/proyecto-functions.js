@@ -580,6 +580,85 @@ function mostrarNotificacion(mensaje, tipo = 'success', duracion = 3000) {
     }, duracion);
 }
 
+// Función para exportar proyecto con peso ponderado
+function exportarProyecto(proyectoId, formato = 'json') {
+    if (!proyectoId) {
+        mostrarNotificacion('ID de proyecto requerido', 'error');
+        return;
+    }
+    
+    mostrarNotificacion('Iniciando exportación...', 'info', 1000);
+    
+    const url = `api/exportar.php?action=proyecto&proyecto_id=${proyectoId}&formato=${formato}`;
+    
+    // Crear enlace temporal para descarga
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setTimeout(() => {
+        mostrarNotificacion('Exportación iniciada correctamente', 'success');
+    }, 1000);
+}
+
+// Función para exportar reporte HTML
+function exportarReporte(proyectoId) {
+    if (!proyectoId) {
+        mostrarNotificacion('ID de proyecto requerido', 'error');
+        return;
+    }
+    
+    mostrarNotificacion('Generando reporte...', 'info', 1000);
+    
+    const url = `api/exportar.php?action=reporte_proyecto&proyecto_id=${proyectoId}&formato=html`;
+    
+    // Abrir en nueva ventana
+    window.open(url, '_blank');
+    
+    setTimeout(() => {
+        mostrarNotificacion('Reporte generado exitosamente', 'success');
+    }, 1000);
+}
+
+// Función para importar datos del proyecto Cafeto
+function importarDatosCafeto(proyectoId) {
+    if (!proyectoId) {
+        mostrarNotificacion('ID de proyecto requerido', 'error');
+        return;
+    }
+    
+    if (confirm('¿Desea importar los datos de ejemplo del proyecto Cafeto? Esto reemplazará las tareas existentes.')) {
+        mostrarNotificacion('Importando datos de ejemplo...', 'info');
+        
+        fetch('api/proyectos.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'importar_excel_cafeto',
+                proyecto_id: proyectoId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarNotificacion('Datos del proyecto Cafeto importados exitosamente', 'success');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                mostrarNotificacion('Error al importar datos: ' + (data.message || 'Error desconocido'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion('Error al importar datos', 'error');
+        });
+    }
+}
+
 // Función para actualizar estadísticas en tiempo real
 function actualizarEstadisticas(proyectoId) {
     if (!proyectoId) return;
@@ -652,63 +731,37 @@ function distribuirPesoAutomatico(proyectoId, pesoTotal = 1.0) {
     });
 }
 
-// Función para exportar proyecto con peso ponderado
-function exportarProyecto(proyectoId, formato = 'json') {
+// Función para recalcular progreso
+function recalcularProgreso(proyectoId) {
     if (!proyectoId) {
         mostrarNotificacion('ID de proyecto requerido', 'error');
         return;
     }
     
-    mostrarNotificacion('Iniciando exportación...', 'info', 1000);
+    mostrarNotificacion('Recalculando progreso...', 'info');
     
-    const url = `api/exportar.php?action=proyecto&proyecto_id=${proyectoId}&formato=${formato}`;
-    
-    // Crear enlace temporal para descarga
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `proyecto_${proyectoId}_${new Date().toISOString().split('T')[0]}.${formato}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    setTimeout(() => {
-        mostrarNotificacion('Archivo descargado exitosamente', 'success');
-    }, 1000);
-}
-
-// Función para importar datos desde Excel
-function importarDatosExcel(proyectoId, datosExcel, limpiarExistentes = true) {
-    if (!proyectoId || !datosExcel || !Array.isArray(datosExcel)) {
-        mostrarNotificacion('Datos de importación inválidos', 'error');
-        return;
-    }
-    
-    const data = {
-        action: 'importar_excel',
-        proyecto_id: proyectoId,
-        datos: datosExcel,
-        limpiar_existentes: limpiarExistentes
-    };
-    
-    fetch('api/tareas.php', {
+    fetch('api/proyectos.php', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify({
+            action: 'recalcular_progreso',
+            proyecto_id: proyectoId
+        })
     })
     .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            mostrarNotificacion(`${datosExcel.length} tareas importadas exitosamente`, 'success');
-            setTimeout(() => location.reload(), 1500);
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('Progreso recalculado exitosamente', 'success');
+            setTimeout(() => location.reload(), 1000);
         } else {
-            mostrarNotificacion('Error al importar: ' + (result.message || 'Error desconocido'), 'error');
+            mostrarNotificacion('Error al recalcular progreso', 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        mostrarNotificacion('Error al importar datos', 'error');
+        mostrarNotificacion('Error al recalcular progreso', 'error');
     });
 }
 
@@ -777,6 +830,30 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Configurar validación de formularios
     configurarValidacionFormularios();
+    
+    // Atajos de teclado
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            switch(e.key.toLowerCase()) {
+                case 'n':
+                    e.preventDefault();
+                    const modalNuevaTarea = document.getElementById('modalNuevaTarea');
+                    if (modalNuevaTarea) {
+                        const modal = new bootstrap.Modal(modalNuevaTarea);
+                        modal.show();
+                    }
+                    break;
+                case 'p':
+                    e.preventDefault();
+                    const modalNuevoProyecto = document.getElementById('modalNuevoProyecto');
+                    if (modalNuevoProyecto) {
+                        const modal = new bootstrap.Modal(modalNuevoProyecto);
+                        modal.show();
+                    }
+                    break;
+            }
+        }
+    });
 });
 
 // Función para configurar validación de formularios
@@ -818,4 +895,6 @@ window.mostrarNotificacion = mostrarNotificacion;
 window.actualizarEstadisticas = actualizarEstadisticas;
 window.distribuirPesoAutomatico = distribuirPesoAutomatico;
 window.exportarProyecto = exportarProyecto;
-window.importarDatosExcel = importarDatosExcel;
+window.exportarReporte = exportarReporte;
+window.importarDatosCafeto = importarDatosCafeto;
+window.recalcularProgreso = recalcularProgreso;
