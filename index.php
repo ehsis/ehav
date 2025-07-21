@@ -13,9 +13,19 @@ $_SESSION['proyecto_actual'] = $proyecto_actual_id;
 $proyecto_actual = $proyectoManager->obtenerProyecto($proyecto_actual_id);
 $proyectos = $proyectoManager->obtenerProyectos();
 
-// Obtener estadísticas del proyecto actual
+// Si no se encuentra el proyecto, usar el primero disponible
+if (!$proyecto_actual && !empty($proyectos)) {
+    $proyecto_actual = $proyectos[0];
+    $proyecto_actual_id = $proyecto_actual['id'];
+    $_SESSION['proyecto_actual'] = $proyecto_actual_id;
+}
+
+// Obtener estadísticas del proyecto actual (con peso ponderado)
 $stats = $proyectoManager->obtenerEstadisticasProyecto($proyecto_actual_id);
 $tareas = $proyectoManager->obtenerTareasProyecto($proyecto_actual_id);
+$estadisticas_por_tipo = $proyectoManager->obtenerEstadisticasPorTipo($proyecto_actual_id);
+$estadisticas_por_fase = $proyectoManager->obtenerEstadisticasPorFase($proyecto_actual_id);
+$cronograma_ponderado = $proyectoManager->obtenerCronogramaPonderado($proyecto_actual_id);
 
 $view = $_GET['view'] ?? 'dashboard';
 
@@ -23,11 +33,26 @@ include 'includes/header.php';
 ?>
 
 <div class="container mt-4">
-    <!-- Selector de proyecto -->
+    <!-- Selector de proyecto y estadísticas principales -->
     <div class="row mb-4">
         <div class="col-md-8">
-            <h1 class="h3"><i class="fas fa-building"></i> <?= htmlspecialchars($proyecto_actual['nombre']) ?></h1>
-            <p class="text-muted"><?= htmlspecialchars($proyecto_actual['descripcion']) ?></p>
+            <h1 class="h3">
+                <i class="fas fa-building"></i> 
+                <?= htmlspecialchars($proyecto_actual['nombre'] ?? 'Sin Proyecto') ?>
+                <span class="badge bg-<?= strtolower($proyecto_actual['estado'] ?? 'activo') ?> ms-2">
+                    <?= $proyecto_actual['estado'] ?? 'Activo' ?>
+                </span>
+            </h1>
+            <p class="text-muted"><?= htmlspecialchars($proyecto_actual['descripcion'] ?? '') ?></p>
+            
+            <!-- Progreso ponderado principal -->
+            <div class="alert alert-info d-flex align-items-center">
+                <i class="fas fa-chart-line me-2"></i>
+                <strong>Progreso Ponderado: <?= number_format($stats['avance_promedio'], 2) ?>%</strong>
+                <span class="ms-3 text-muted">
+                    (Peso total: <?= number_format($stats['peso_total'], 4) ?>)
+                </span>
+            </div>
         </div>
         <div class="col-md-4">
             <div class="card">
@@ -38,6 +63,7 @@ include 'includes/header.php';
                             <option value="<?= $proyecto['id'] ?>" 
                                     <?= ($proyecto['id'] == $proyecto_actual_id) ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($proyecto['nombre']) ?>
+                                (<?= number_format($proyecto['progreso_calculado'] ?? 0, 1) ?>%)
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -92,6 +118,7 @@ include 'includes/header.php';
                     <div>
                         <h5>Total de Tareas</h5>
                         <div class="metric-number"><?= $stats['total'] ?></div>
+                        <small class="text-light">Peso total: <?= number_format($stats['peso_total'], 4) ?></small>
                     </div>
                     <i class="fas fa-tasks fa-3x opacity-50"></i>
                 </div>
@@ -102,6 +129,9 @@ include 'includes/header.php';
                     <div>
                         <h5>Completadas</h5>
                         <div class="metric-number"><?= $stats['completadas'] ?></div>
+                        <small class="text-light">
+                            Peso: <?= number_format($stats['avance_ponderado'], 4) ?>
+                        </small>
                     </div>
                     <i class="fas fa-check-circle fa-3x opacity-50"></i>
                 </div>
@@ -112,6 +142,7 @@ include 'includes/header.php';
                     <div>
                         <h5>En Proceso</h5>
                         <div class="metric-number"><?= $stats['en_proceso'] ?></div>
+                        <small class="text-light">Progreso parcial</small>
                     </div>
                     <i class="fas fa-clock fa-3x opacity-50"></i>
                 </div>
@@ -122,52 +153,52 @@ include 'includes/header.php';
                     <div>
                         <h5>Pendientes</h5>
                         <div class="metric-number"><?= $stats['pendientes'] ?></div>
+                        <small class="text-light">Sin iniciar</small>
                     </div>
                     <i class="fas fa-exclamation-triangle fa-3x opacity-50"></i>
                 </div>
             </div>
         </div>
 
-        <!-- Progreso general -->
+        <!-- Progreso por tipo y fases -->
         <div class="row mb-4">
-            <div class="col-md-8">
+            <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="fas fa-chart-line"></i> Progreso General</h5>
+                        <h5><i class="fas fa-layer-group"></i> Progreso por Tipo (Ponderado)</h5>
                     </div>
                     <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label">Avance del Proyecto: <?= number_format($stats['avance_promedio'], 1) ?>%</label>
-                            <div class="progress" style="height: 20px;">
-                                <div class="progress-bar" role="progressbar" 
-                                     style="width: <?= $stats['avance_promedio'] ?>%" 
-                                     aria-valuenow="<?= $stats['avance_promedio'] ?>" 
-                                     aria-valuemin="0" aria-valuemax="100">
-                                    <?= number_format($stats['avance_promedio'], 1) ?>%
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <p><strong>Cliente:</strong> <?= htmlspecialchars($proyecto_actual['cliente']) ?></p>
-                                <p><strong>Estado:</strong> 
-                                    <span class="badge bg-<?= strtolower($proyecto_actual['estado']) ?>">
-                                        <?= $proyecto_actual['estado'] ?>
+                        <?php foreach ($estadisticas_por_tipo as $tipo_stat): ?>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <span class="badge badge-<?= strtolower($tipo_stat['tipo']) ?>">
+                                        <?= $tipo_stat['tipo'] ?>
                                     </span>
-                                </p>
+                                    <span class="fw-bold">
+                                        <?= number_format($tipo_stat['avance_promedio'], 1) ?>%
+                                    </span>
+                                </div>
+                                <div class="progress mt-1" style="height: 8px;">
+                                    <div class="progress-bar" role="progressbar" 
+                                         style="width: <?= $tipo_stat['avance_promedio'] ?>%" 
+                                         aria-valuenow="<?= $tipo_stat['avance_promedio'] ?>" 
+                                         aria-valuemin="0" aria-valuemax="100">
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    Peso: <?= number_format($tipo_stat['peso_total'], 4) ?> | 
+                                    Tareas: <?= $tipo_stat['total'] ?>
+                                </small>
                             </div>
-                            <div class="col-md-6">
-                                <p><strong>Fecha Inicio:</strong> <?= $proyecto_actual['fecha_inicio'] ? date('d/m/Y', strtotime($proyecto_actual['fecha_inicio'])) : 'No definida' ?></p>
-                                <p><strong>Fecha Estimada:</strong> <?= $proyecto_actual['fecha_fin_estimada'] ? date('d/m/Y', strtotime($proyecto_actual['fecha_fin_estimada'])) : 'No definida' ?></p>
-                            </div>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            
+            <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="fas fa-chart-pie"></i> Distribución</h5>
+                        <h5><i class="fas fa-chart-pie"></i> Distribución Ponderada</h5>
                     </div>
                     <div class="card-body">
                         <canvas id="graficoProgreso" width="300" height="300"></canvas>
@@ -176,12 +207,83 @@ include 'includes/header.php';
             </div>
         </div>
 
+        <!-- Cronograma por fases -->
+        <?php if (!empty($cronograma_ponderado)): ?>
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-calendar-alt"></i> Progreso por Fases Principales</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Fase</th>
+                                        <th>Total Elementos</th>
+                                        <th>Peso de Fase</th>
+                                        <th>Progreso</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($cronograma_ponderado as $fase): ?>
+                                        <tr>
+                                            <td>
+                                                <strong><?= htmlspecialchars($fase['fase_principal']) ?></strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary"><?= $fase['total_elementos'] ?></span>
+                                                <small class="text-muted">(<?= $fase['completados'] ?> completados)</small>
+                                            </td>
+                                            <td>
+                                                <span class="fw-bold"><?= number_format($fase['peso_fase'], 4) ?></span>
+                                            </td>
+                                            <td>
+                                                <div class="progress" style="height: 20px;">
+                                                    <div class="progress-bar" role="progressbar" 
+                                                         style="width: <?= $fase['progreso_fase'] ?>%" 
+                                                         aria-valuenow="<?= $fase['progreso_fase'] ?>" 
+                                                         aria-valuemin="0" aria-valuemax="100">
+                                                        <?= number_format($fase['progreso_fase'], 1) ?>%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <?php if ($fase['progreso_fase'] >= 100): ?>
+                                                    <span class="badge bg-success">Completada</span>
+                                                <?php elseif ($fase['progreso_fase'] > 0): ?>
+                                                    <span class="badge bg-warning">En Proceso</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-danger">Pendiente</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Tareas recientes -->
         <div class="row">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h5><i class="fas fa-history"></i> Tareas Recientes</h5>
+                        <div>
+                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaTarea">
+                                <i class="fas fa-plus"></i> Nueva Tarea
+                            </button>
+                            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalImportarExcel">
+                                <i class="fas fa-file-excel"></i> Importar Excel
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -190,25 +292,49 @@ include 'includes/header.php';
                                     <tr>
                                         <th>Tarea</th>
                                         <th>Tipo</th>
+                                        <th>Fase</th>
+                                        <th>Peso</th>
+                                        <th>Contrato</th>
                                         <th>Estado</th>
                                         <th>Progreso</th>
-                                        <th>Última Actualización</th>
+                                        <th>Actualización</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php 
-                                    $recent_query = "SELECT * FROM tareas WHERE proyecto_id = ? ORDER BY updated_at DESC LIMIT 10";
+                                    $recent_query = "SELECT * FROM tareas WHERE proyecto_id = ? ORDER BY updated_at DESC LIMIT 15";
                                     $recent_stmt = $db->prepare($recent_query);
                                     $recent_stmt->execute([$proyecto_actual_id]);
                                     $recent_tareas = $recent_stmt->fetchAll(PDO::FETCH_ASSOC);
                                     
                                     foreach ($recent_tareas as $tarea): ?>
-                                        <tr>
-                                            <td><?= htmlspecialchars($tarea['nombre']) ?></td>
-                                            <td><span class="badge badge-<?= strtolower($tarea['tipo']) ?>"><?= $tarea['tipo'] ?></span></td>
-                                            <td><span class="estado-<?= strtolower(str_replace(' ', '', $tarea['estado'])) ?>">
-                                                <i class="fas fa-circle"></i> <?= $tarea['estado'] ?>
-                                            </span></td>
+                                        <tr class="task-card <?= strtolower($tarea['tipo']) ?>">
+                                            <td>
+                                                <strong><?= htmlspecialchars($tarea['nombre']) ?></strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-<?= strtolower($tarea['tipo']) ?>">
+                                                    <?= $tarea['tipo'] ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    <?= htmlspecialchars($tarea['fase_principal'] ?? 'Sin fase') ?>
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <span class="fw-bold"><?= number_format($tarea['peso_actividad'], 4) ?></span>
+                                            </td>
+                                            <td>
+                                                <span class="badge <?= $tarea['contrato'] === 'Contrato Clave' ? 'bg-warning' : 'bg-secondary' ?>">
+                                                    <?= $tarea['contrato'] ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="estado-<?= strtolower(str_replace(' ', '', $tarea['estado'])) ?>">
+                                                    <i class="fas fa-circle"></i> <?= $tarea['estado'] ?>
+                                                </span>
+                                            </td>
                                             <td>
                                                 <div class="progress" style="height: 15px;">
                                                     <div class="progress-bar" style="width: <?= $tarea['porcentaje_avance'] ?>%">
@@ -216,7 +342,226 @@ include 'includes/header.php';
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td><?= date('d/m/Y H:i', strtotime($tarea['updated_at'])) ?></td>
+                                            <td>
+                                                <small>
+                                                    <?= date('d/m/Y H:i', strtotime($tarea['updated_at'])) ?>
+                                                </small>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <?php elseif ($view === 'tareas'): ?>
+        <!-- Vista de Tareas completa -->
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-tasks"></i> Gestión de Tareas - <?= htmlspecialchars($proyecto_actual['nombre']) ?></h2>
+                    <div>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaTarea">
+                            <i class="fas fa-plus"></i> Nueva Tarea
+                        </button>
+                        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalImportarExcel">
+                            <i class="fas fa-file-excel"></i> Importar Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select class="form-select" id="filtroTipo" onchange="filtrarTabla()">
+                    <option value="">Todos los tipos</option>
+                    <option value="Fase">Fase</option>
+                    <option value="Actividad">Actividad</option>
+                    <option value="Tarea">Tarea</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="filtroEstado" onchange="filtrarTabla()">
+                    <option value="">Todos los estados</option>
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="En Proceso">En Proceso</option>
+                    <option value="Listo">Listo</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="filtroFase" onchange="filtrarTabla()">
+                    <option value="">Todas las fases</option>
+                    <?php 
+                    $fases_disponibles = $proyectoManager->obtenerFasesPrincipales($proyecto_actual_id);
+                    foreach ($fases_disponibles as $fase): ?>
+                        <option value="<?= htmlspecialchars($fase) ?>"><?= htmlspecialchars($fase) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="filtroContrato" onchange="filtrarTabla()">
+                    <option value="">Todos los contratos</option>
+                    <option value="Normal">Normal</option>
+                    <option value="Contrato Clave">Contrato Clave</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Tabla de tareas -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-bordered" id="tablaTareas">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Tipo</th>
+                                        <th>Fase Principal</th>
+                                        <th>Peso</th>
+                                        <th>Contrato</th>
+                                        <th>Duración</th>
+                                        <th>Estado</th>
+                                        <th>Progreso</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($tareas as $t): ?>
+                                        <tr data-estado="<?= $t['estado'] ?>" 
+                                            data-tipo="<?= $t['tipo'] ?>"
+                                            data-fase="<?= htmlspecialchars($t['fase_principal'] ?? '') ?>"
+                                            data-contrato="<?= $t['contrato'] ?>">
+                                            <td>
+                                                <strong><?= htmlspecialchars($t['nombre']) ?></strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-<?= strtolower($t['tipo']) ?>">
+                                                    <?= $t['tipo'] ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    <?= htmlspecialchars($t['fase_principal'] ?? 'Sin fase') ?>
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <span class="fw-bold"><?= number_format($t['peso_actividad'], 4) ?></span>
+                                            </td>
+                                            <td>
+                                                <span class="badge <?= $t['contrato'] === 'Contrato Clave' ? 'bg-warning text-dark' : 'bg-secondary' ?>">
+                                                    <?= $t['contrato'] ?>
+                                                </span>
+                                            </td>
+                                            <td><?= $t['duracion_dias'] ?> días</td>
+                                            <td>
+                                                <span class="badge bg-<?= $t['estado'] === 'Listo' ? 'success' : ($t['estado'] === 'En Proceso' ? 'warning' : 'danger') ?>">
+                                                    <?= $t['estado'] ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="progress" style="height: 15px;">
+                                                    <div class="progress-bar" role="progressbar" style="width: <?= $t['porcentaje_avance'] ?>%;">
+                                                        <?= $t['porcentaje_avance'] ?>%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <button class="btn btn-sm btn-warning" onclick="editarTarea(<?= $t['id'] ?>)">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger" onclick="eliminarTarea(<?= $t['id'] ?>)">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <?php elseif ($view === 'reportes'): ?>
+        <!-- Vista de Reportes -->
+        <div class="row">
+            <div class="col-12">
+                <h2><i class="fas fa-chart-bar"></i> Reportes y Análisis - <?= htmlspecialchars($proyecto_actual['nombre']) ?></h2>
+                <hr>
+            </div>
+        </div>
+
+        <!-- Gráficos y reportes -->
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-bar"></i> Progreso por Tipo (Ponderado)</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="graficoTipos" width="400" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-list-alt"></i> Distribución por Estado</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="graficoEstados" width="400" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de estadísticas detalladas -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-table"></i> Análisis Detallado por Fases</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Fase Principal</th>
+                                        <th>Total Tareas</th>
+                                        <th>Peso Total</th>
+                                        <th>Completadas</th>
+                                        <th>En Proceso</th>
+                                        <th>Pendientes</th>
+                                        <th>Progreso Ponderado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($estadisticas_por_fase as $fase_stat): ?>
+                                        <tr>
+                                            <td><strong><?= htmlspecialchars($fase_stat['fase_principal']) ?></strong></td>
+                                            <td><?= $fase_stat['total'] ?></td>
+                                            <td><?= number_format($fase_stat['peso_total'], 4) ?></td>
+                                            <td><span class="badge bg-success"><?= $fase_stat['completadas'] ?></span></td>
+                                            <td><span class="badge bg-warning"><?= $fase_stat['en_proceso'] ?></span></td>
+                                            <td><span class="badge bg-danger"><?= $fase_stat['pendientes'] ?></span></td>
+                                            <td>
+                                                <div class="progress" style="height: 20px;">
+                                                    <div class="progress-bar" style="width: <?= $fase_stat['avance_promedio'] ?>%">
+                                                        <?= number_format($fase_stat['avance_promedio'], 1) ?>%
+                                                    </div>
+                                                </div>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -228,7 +573,7 @@ include 'includes/header.php';
         </div>
 
     <?php elseif ($view === 'proyectos'): ?>
-        <!-- Gestión de Proyectos -->
+        <!-- Vista de gestión de proyectos (igual que antes pero con progreso ponderado) -->
         <div class="row">
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -246,9 +591,10 @@ include 'includes/header.php';
                 $stats_proyecto = $proyectoManager->obtenerEstadisticasProyecto($proyecto['id']);
                 ?>
                 <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card h-100">
+                    <div class="card h-100 <?= ($proyecto['id'] == $proyecto_actual_id) ? 'proyecto-activo' : '' ?>">
                         <div class="card-header bg-primary text-white">
                             <h5 class="card-title mb-0"><?= htmlspecialchars($proyecto['nombre']) ?></h5>
+                            <small>Progreso Ponderado: <?= number_format($proyecto['progreso_calculado'] ?? 0, 1) ?>%</small>
                         </div>
                         <div class="card-body">
                             <p class="card-text"><?= htmlspecialchars($proyecto['descripcion']) ?></p>
@@ -266,6 +612,7 @@ include 'includes/header.php';
                                         <?= number_format($stats_proyecto['avance_promedio'], 1) ?>%
                                     </div>
                                 </div>
+                                <small class="text-muted">Peso total: <?= number_format($stats_proyecto['peso_total'], 4) ?></small>
                             </div>
                             <div class="row text-center">
                                 <div class="col-4">
@@ -305,243 +652,11 @@ include 'includes/header.php';
             <?php endforeach; ?>
         </div>
 
-        <!-- Modal para nuevo proyecto -->
-        <div class="modal fade" id="modalNuevoProyecto" tabindex="-1" aria-labelledby="modalNuevoProyectoLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title" id="modalNuevoProyectoLabel">
-                            <i class="fas fa-plus"></i> Crear Nuevo Proyecto
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="formNuevoProyecto">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="nombre_proyecto" class="form-label">Nombre del Proyecto</label>
-                                        <input type="text" class="form-control" id="nombre_proyecto" name="nombre" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="cliente_proyecto" class="form-label">Cliente</label>
-                                        <input type="text" class="form-control" id="cliente_proyecto" name="cliente" required>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="descripcion_proyecto" class="form-label">Descripción</label>
-                                <textarea class="form-control" id="descripcion_proyecto" name="descripcion" rows="3"></textarea>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="fecha_inicio_proyecto" class="form-label">Fecha de Inicio</label>
-                                        <input type="date" class="form-control" id="fecha_inicio_proyecto" name="fecha_inicio">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="fecha_fin_proyecto" class="form-label">Fecha Fin Estimada</label>
-                                        <input type="date" class="form-control" id="fecha_fin_proyecto" name="fecha_fin_estimada">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="presupuesto_proyecto" class="form-label">Presupuesto</label>
-                                        <input type="number" class="form-control" id="presupuesto_proyecto" name="presupuesto" step="0.01">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="estado_proyecto" class="form-label">Estado</label>
-                                        <select class="form-select" id="estado_proyecto" name="estado" required>
-                                            <option value="Activo">Activo</option>
-                                            <option value="Pausado">Pausado</option>
-                                            <option value="Terminado">Terminado</option>
-                                            <option value="Cancelado">Cancelado</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="plantilla_proyecto" class="form-label">Copiar tareas desde proyecto existente</label>
-                                <select class="form-select" id="plantilla_proyecto" name="plantilla_proyecto">
-                                    <option value="">No copiar tareas</option>
-                                    <?php foreach ($proyectos as $proyecto): ?>
-                                        <option value="<?= $proyecto['id'] ?>">
-                                            <?= htmlspecialchars($proyecto['nombre']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <div class="form-text">Si seleccionas un proyecto, se copiarán todas sus tareas al nuevo proyecto.</div>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="button" class="btn btn-primary" onclick="crearProyecto()">Crear Proyecto</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    <?php elseif ($view === 'tareas'): ?>
-        <!-- Vista de Tareas (mantiene el código anterior pero filtrado por proyecto) -->
-        <div class="row">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2><i class="fas fa-tasks"></i> Tareas - <?= htmlspecialchars($proyecto_actual['nombre']) ?></h2>
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaTarea">
-                        <i class="fas fa-plus"></i> Nueva Tarea
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tabla de tareas del proyecto actual -->
-        <div class="row">
-            <div class="col-12">
-                <div class="table-responsive">
-                    <table class="table table-striped table-bordered" id="tablaTareas">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Nombre</th>
-                                <th>Tipo</th>
-                                <th>Duración (días)</th>
-                                <th>Estado</th>
-                                <th>Progreso</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($tareas as $t): ?>
-                                <tr data-estado="<?= $t['estado'] ?>" data-tipo="<?= $t['tipo'] ?>">
-                                    <td><?= htmlspecialchars($t['nombre']) ?></td>
-                                    <td>
-                                        <span class="badge badge-<?= strtolower($t['tipo']) ?>">
-                                            <?= $t['tipo'] ?>
-                                        </span>
-                                    </td>
-                                    <td><?= $t['duracion_dias'] ?></td>
-                                    <td>
-                                        <span class="badge bg-<?= strtolower($t['estado']) ?>">
-                                            <?= $t['estado'] ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="progress" style="height: 15px;">
-                                            <div class="progress-bar" role="progressbar" style="width: <?= $t['porcentaje_avance'] ?>%;">
-                                                <?= $t['porcentaje_avance'] ?>%
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-sm btn-warning" onclick="mostrarModalEditar(<?= $t['id'] ?>)">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-danger" onclick="eliminarTarea(<?= $t['id'] ?>)">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal para nueva tarea (modificado para incluir proyecto_id) -->
-        <div class="modal fade" id="modalNuevaTarea" tabindex="-1" aria-labelledby="modalNuevaTareaLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title" id="modalNuevaTareaLabel">
-                            <i class="fas fa-plus"></i> Nueva Tarea para <?= htmlspecialchars($proyecto_actual['nombre']) ?>
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="formNuevaTarea">
-                            <input type="hidden" name="proyecto_id" value="<?= $proyecto_actual_id ?>">
-                            <div class="mb-3">
-                                <label for="nombre_tarea" class="form-label">Nombre</label>
-                                <input type="text" class="form-control" id="nombre_tarea" name="nombre" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="tipo_tarea" class="form-label">Tipo</label>
-                                <select class="form-select" id="tipo_tarea" name="tipo" required>
-                                    <option value="Fase">Fase</option>
-                                    <option value="Actividad">Actividad</option>
-                                    <option value="Tarea">Tarea</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="duracion_tarea" class="form-label">Duración (días)</label>
-                                <input type="number" class="form-control" id="duracion_tarea" name="duracion_dias" min="1" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="estado_tarea" class="form-label">Estado</label>
-                                <select class="form-select" id="estado_tarea" name="estado" required>
-                                    <option value="Pendiente">Pendiente</option>
-                                    <option value="En Proceso">En Proceso</option>
-                                    <option value="Listo">Listo</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="porcentaje_tarea" class="form-label">Porcentaje de avance</label>
-                                <input type="number" class="form-control" id="porcentaje_tarea" name="porcentaje_avance" min="0" max="100" value="0" required>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="button" class="btn btn-primary" onclick="agregarTarea()">Guardar</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    <?php elseif ($view === 'reportes'): ?>
-        <!-- Reportes del proyecto actual -->
-        <div class="row">
-            <div class="col-12">
-                <h2><i class="fas fa-chart-bar"></i> Reportes - <?= htmlspecialchars($proyecto_actual['nombre']) ?></h2>
-                <hr>
-            </div>
-        </div>
-
-        <!-- Gráficos y reportes aquí -->
-        <div class="row mb-4">
-            <div class="col-md-6 mb-3">
-                <div class="card">
-                    <div class="card-header">
-                        <h5><i class="fas fa-chart-bar"></i> Avance por Fase</h5>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="graficoFases" width="400" height="300"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 mb-3">
-                <div class="card">
-                    <div class="card-header">
-                        <h5><i class="fas fa-list-alt"></i> Tareas por Estado</h5>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="graficoEstados" width="400" height="300"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     <?php endif; ?>
 </div>
+
+<!-- Incluir modales -->
+<?php include 'includes/modales.php'; ?>
 
 <script>
 // Función para cambiar de proyecto
@@ -549,129 +664,34 @@ function cambiarProyecto(proyectoId) {
     window.location.href = '?proyecto=' + proyectoId + '&view=<?= $view ?>';
 }
 
-// Función para cambiar de vista manteniendo el proyecto actual
+// Función para cambiar de vista
 function cambiarVista(vista) {
     window.location.href = '?proyecto=<?= $proyecto_actual_id ?>&view=' + vista;
 }
 
-// Función para crear nuevo proyecto
-function crearProyecto() {
-    const form = document.getElementById('formNuevoProyecto');
-    const formData = new FormData(form);
+// Filtrar tabla de tareas
+function filtrarTabla() {
+    const filtroTipo = document.getElementById('filtroTipo')?.value || '';
+    const filtroEstado = document.getElementById('filtroEstado')?.value || '';
+    const filtroFase = document.getElementById('filtroFase')?.value || '';
+    const filtroContrato = document.getElementById('filtroContrato')?.value || '';
     
-    const data = {
-        action: 'crear_proyecto',
-        nombre: formData.get('nombre'),
-        descripcion: formData.get('descripcion'),
-        fecha_inicio: formData.get('fecha_inicio'),
-        fecha_fin_estimada: formData.get('fecha_fin_estimada'),
-        cliente: formData.get('cliente'),
-        presupuesto: formData.get('presupuesto'),
-        estado: formData.get('estado'),
-        plantilla_proyecto: formData.get('plantilla_proyecto')
-    };
-
-    fetch('api/proyectos.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Proyecto creado exitosamente');
-            location.reload();
-        } else {
-            alert('Error al crear el proyecto: ' + (data.message || 'Error desconocido'));
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error al crear el proyecto');
-    });
-}
-
-// Función para duplicar proyecto
-function duplicarProyecto(proyectoId) {
-    if (confirm('¿Desea duplicar este proyecto con todas sus tareas?')) {
-        fetch('api/proyectos.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'duplicar_proyecto',
-                proyecto_id: proyectoId
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Proyecto duplicado exitosamente');
-                location.reload();
-            } else {
-                alert('Error al duplicar el proyecto');
-            }
-        });
-    }
-}
-
-// Función para eliminar proyecto
-function eliminarProyecto(proyectoId) {
-    if (confirm('¿Está seguro de que desea eliminar este proyecto? Esta acción no se puede deshacer.')) {
-        fetch('api/proyectos.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'eliminar_proyecto',
-                proyecto_id: proyectoId
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Proyecto eliminado exitosamente');
-                location.reload();
-            } else {
-                alert('Error al eliminar el proyecto');
-            }
-        });
-    }
-}
-
-// Función para agregar tarea (modificada para incluir proyecto_id)
-function agregarTarea() {
-    const form = document.getElementById('formNuevaTarea');
-    const formData = new FormData(form);
+    const filas = document.querySelectorAll('#tablaTareas tbody tr');
     
-    const data = {
-        action: 'crear',
-        nombre: formData.get('nombre'),
-        tipo: formData.get('tipo'),
-        duracion_dias: formData.get('duracion_dias'),
-        estado: formData.get('estado'),
-        porcentaje_avance: formData.get('porcentaje_avance'),
-        proyecto_id: formData.get('proyecto_id')
-    };
-
-    fetch('api/tareas.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert('Error al crear la tarea');
-        }
+    filas.forEach(fila => {
+        const tipo = fila.dataset.tipo;
+        const estado = fila.dataset.estado;
+        const fase = fila.dataset.fase;
+        const contrato = fila.dataset.contrato;
+        
+        let mostrar = true;
+        
+        if (filtroTipo && tipo !== filtroTipo) mostrar = false;
+        if (filtroEstado && estado !== filtroEstado) mostrar = false;
+        if (filtroFase && fase !== filtroFase) mostrar = false;
+        if (filtroContrato && contrato !== filtroContrato) mostrar = false;
+        
+        fila.style.display = mostrar ? '' : 'none';
     });
 }
 
@@ -698,6 +718,76 @@ document.addEventListener('DOMContentLoaded', function() {
                 plugins: {
                     legend: {
                         position: 'bottom'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Distribución de Tareas'
+                    }
+                }
+            }
+        });
+    }
+});
+<?php endif; ?>
+
+<?php if ($view === 'reportes'): ?>
+// Gráficos para reportes
+document.addEventListener('DOMContentLoaded', function() {
+    // Gráfico por tipos
+    const ctxTipos = document.getElementById('graficoTipos');
+    if (ctxTipos) {
+        new Chart(ctxTipos, {
+            type: 'bar',
+            data: {
+                labels: [<?php foreach($estadisticas_por_tipo as $tipo): ?>'<?= $tipo['tipo'] ?>',<?php endforeach; ?>],
+                datasets: [{
+                    label: 'Progreso Ponderado (%)',
+                    data: [<?php foreach($estadisticas_por_tipo as $tipo): ?><?= number_format($tipo['avance_promedio'], 2) ?>,<?php endforeach; ?>],
+                    backgroundColor: [
+                        '#2c3e50',
+                        '#3498db', 
+                        '#f39c12'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Gráfico por estados
+    const ctxEstados = document.getElementById('graficoEstados');
+    if (ctxEstados) {
+        new Chart(ctxEstados, {
+            type: 'pie',
+            data: {
+                labels: ['Listo', 'En Proceso', 'Pendiente'],
+                datasets: [{
+                    data: [<?= $stats['completadas'] ?>, <?= $stats['en_proceso'] ?>, <?= $stats['pendientes'] ?>],
+                    backgroundColor: [
+                        '#27ae60',
+                        '#f39c12', 
+                        '#e74c3c'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
                     }
                 }
             }
@@ -707,4 +797,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <?php endif; ?>
 </script>
 
-<?php include 'includes/footer.php'; ?>                    
+<!-- Cargar scripts de funciones -->
+<script src="js/proyecto-functions.js"></script>
+
+<?php include 'includes/footer.php'; ?>
