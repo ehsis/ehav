@@ -202,7 +202,9 @@ include 'includes/header.php';
                         <h5><i class="fas fa-chart-pie"></i> Distribución Ponderada</h5>
                     </div>
                     <div class="card-body">
-                        <canvas id="graficoProgreso" width="300" height="300"></canvas>
+                        <div id="dashboardChartContainer" style="position: relative; height: 300px;">
+                            <canvas id="graficoProgreso"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -541,7 +543,9 @@ include 'includes/header.php';
                         <h5><i class="fas fa-chart-bar"></i> Progreso por Tipo (Ponderado)</h5>
                     </div>
                     <div class="card-body">
-                        <canvas id="graficoTipos" height="300"></canvas>
+                        <div id="tiposChartContainer" style="position: relative; height: 300px;">
+                            <canvas id="graficoTipos"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -551,7 +555,9 @@ include 'includes/header.php';
                         <h5><i class="fas fa-chart-pie"></i> Distribución por Estado</h5>
                     </div>
                     <div class="card-body">
-                        <canvas id="graficoEstados" height="300"></canvas>
+                        <div id="estadosChartContainer" style="position: relative; height: 300px;">
+                            <canvas id="graficoEstados"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -566,7 +572,9 @@ include 'includes/header.php';
                         <h5><i class="fas fa-chart-area"></i> Progreso por Fases Principales</h5>
                     </div>
                     <div class="card-body">
-                        <canvas id="graficoFases" height="150"></canvas>
+                        <div id="fasesChartContainer" style="position: relative; height: 200px;">
+                            <canvas id="graficoFases"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -733,27 +741,27 @@ include 'includes/header.php';
 <!-- Incluir modales -->
 <?php include 'includes/modales.php'; ?>
 
-<!-- Variables JavaScript para los gráficos -->
+<!-- Variables JavaScript para los gráficos - MEJORADO -->
 <script>
-// Variables globales con datos para los gráficos
+// ========== CONFIGURACIÓN GLOBAL ==========
 window.chartData = {
     stats: <?= json_encode($stats) ?>,
     estadisticas_por_tipo: <?= json_encode($estadisticas_por_tipo) ?>,
     estadisticas_por_fase: <?= json_encode($estadisticas_por_fase) ?>,
-    proyecto_id: <?= $proyecto_actual_id ?>
+    proyecto_id: <?= $proyecto_actual_id ?>,
+    view: '<?= $view ?>'
 };
 
-// Función para cambiar de proyecto
+// ========== FUNCIONES DE NAVEGACIÓN ==========
 function cambiarProyecto(proyectoId) {
     window.location.href = '?proyecto=' + proyectoId + '&view=<?= $view ?>';
 }
 
-// Función para cambiar de vista
 function cambiarVista(vista) {
     window.location.href = '?proyecto=<?= $proyecto_actual_id ?>&view=' + vista;
 }
 
-// Filtrar tabla de tareas
+// ========== FILTROS DE TABLA ==========
 function filtrarTabla() {
     const filtroTipo = document.getElementById('filtroTipo')?.value || '';
     const filtroEstado = document.getElementById('filtroEstado')?.value || '';
@@ -779,18 +787,53 @@ function filtrarTabla() {
     });
 }
 
-// Inicialización de gráficos cuando se carga la página
-document.addEventListener('DOMContentLoaded', function() {
-    // Solo inicializar gráficos si Chart.js está disponible
-    if (typeof Chart !== 'undefined') {
-        initializeCharts();
-    } else {
-        console.warn('Chart.js no está disponible. Los gráficos no se mostrarán.');
+// ========== GESTIÓN DE GRÁFICOS ==========
+let chartInstances = {};
+
+function destroyChart(chartId) {
+    if (chartInstances[chartId]) {
+        chartInstances[chartId].destroy();
+        delete chartInstances[chartId];
     }
-});
+}
+
+function waitForChartJS(callback, maxAttempts = 10, currentAttempt = 0) {
+    if (typeof Chart !== 'undefined') {
+        callback();
+    } else if (currentAttempt < maxAttempts) {
+        setTimeout(() => {
+            waitForChartJS(callback, maxAttempts, currentAttempt + 1);
+        }, 500);
+    } else {
+        console.error('Chart.js no se pudo cargar después de múltiples intentos');
+        showChartError();
+    }
+}
+
+function showChartError() {
+    const containers = [
+        'dashboardChartContainer', 
+        'tiposChartContainer', 
+        'estadosChartContainer', 
+        'fasesChartContainer'
+    ];
+    
+    containers.forEach(containerId => {
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = `
+                <div class="alert alert-warning text-center">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p class="mb-0">No se pudieron cargar los gráficos</p>
+                    <small>Verifique que Chart.js esté disponible</small>
+                </div>
+            `;
+        }
+    });
+}
 
 function initializeCharts() {
-    const view = '<?= $view ?>';
+    const view = window.chartData.view;
     
     if (view === 'dashboard') {
         createDashboardChart();
@@ -799,181 +842,362 @@ function initializeCharts() {
     }
 }
 
-// Gráfico del dashboard
+// ========== GRÁFICO DEL DASHBOARD ==========
 function createDashboardChart() {
-    const ctx = document.getElementById('graficoProgreso');
-    if (!ctx) return;
-    
+    const canvas = document.getElementById('graficoProgreso');
+    if (!canvas || !window.chartData) return;
+
+    destroyChart('dashboard');
+
     const stats = window.chartData.stats;
     
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Completadas', 'En Proceso', 'Pendientes'],
-            datasets: [{
-                data: [stats.completadas, stats.en_proceso, stats.pendientes],
-                backgroundColor: [
-                    '#27ae60',
-                    '#f39c12',
-                    '#e74c3c'
-                ],
-                borderWidth: 2,
-                borderColor: '#fff'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
+    try {
+        chartInstances.dashboard = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['Completadas', 'En Proceso', 'Pendientes'],
+                datasets: [{
+                    data: [
+                        parseInt(stats.completadas) || 0,
+                        parseInt(stats.en_proceso) || 0,
+                        parseInt(stats.pendientes) || 0
+                    ],
+                    backgroundColor: [
+                        '#27ae60',
+                        '#f39c12',
+                        '#e74c3c'
+                    ],
+                    borderWidth: 3,
+                    borderColor: '#fff',
+                    hoverBorderWidth: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Distribución de Tareas',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                            }
+                        }
+                    }
                 },
-                title: {
-                    display: true,
-                    text: 'Distribución de Tareas'
+                cutout: '60%',
+                animation: {
+                    animateRotate: true,
+                    animateScale: true,
+                    duration: 1000
                 }
             }
-        }
-    });
-}
-
-// Gráficos de reportes
-function createReportCharts() {
-    createTypeChart();
-    createStatusChart();
-    if (window.chartData.estadisticas_por_fase.length > 0) {
-        createPhaseChart();
+        });
+    } catch (error) {
+        console.error('Error creando gráfico dashboard:', error);
+        showChartError();
     }
 }
 
+// ========== GRÁFICOS DE REPORTES ==========
+function createReportCharts() {
+    setTimeout(() => {
+        createTypeChart();
+        createStatusChart();
+        if (window.chartData.estadisticas_por_fase.length > 0) {
+            createPhaseChart();
+        }
+    }, 100);
+}
+
 function createTypeChart() {
-    const ctx = document.getElementById('graficoTipos');
-    if (!ctx) return;
+    const canvas = document.getElementById('graficoTipos');
+    if (!canvas || !window.chartData) return;
+
+    destroyChart('tipos');
+
+    const tipos = window.chartData.estadisticas_por_tipo || [];
     
-    const tipos = window.chartData.estadisticas_por_tipo;
-    
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: tipos.map(t => t.tipo),
-            datasets: [{
-                label: 'Progreso Ponderado (%)',
-                data: tipos.map(t => parseFloat(t.avance_promedio)),
-                backgroundColor: [
-                    '#2c3e50',
-                    '#3498db', 
-                    '#f39c12'
-                ],
-                borderColor: [
-                    '#34495e',
-                    '#2980b9',
-                    '#e67e22'
-                ],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100,
-                    ticks: {
-                        callback: function(value) {
-                            return value + '%';
+    try {
+        chartInstances.tipos = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: tipos.map(t => t.tipo),
+                datasets: [{
+                    label: 'Progreso Ponderado (%)',
+                    data: tipos.map(t => parseFloat(t.avance_promedio) || 0),
+                    backgroundColor: [
+                        '#2c3e50',
+                        '#3498db', 
+                        '#f39c12'
+                    ],
+                    borderColor: [
+                        '#34495e',
+                        '#2980b9',
+                        '#e67e22'
+                    ],
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
                         }
                     }
-                }
-            },
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Progreso por Tipo de Tarea'
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Progreso por Tipo de Tarea',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y + '%';
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1000,
+                    easing: 'easeOutCubic'
                 }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error('Error creando gráfico tipos:', error);
+    }
 }
 
 function createStatusChart() {
-    const ctx = document.getElementById('graficoEstados');
-    if (!ctx) return;
-    
+    const canvas = document.getElementById('graficoEstados');
+    if (!canvas || !window.chartData) return;
+
+    destroyChart('estados');
+
     const stats = window.chartData.stats;
     
-    new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: ['Listo', 'En Proceso', 'Pendiente'],
-            datasets: [{
-                data: [stats.completadas, stats.en_proceso, stats.pendientes],
-                backgroundColor: [
-                    '#27ae60',
-                    '#f39c12', 
-                    '#e74c3c'
-                ],
-                borderWidth: 2,
-                borderColor: '#fff'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
+    try {
+        chartInstances.estados = new Chart(canvas, {
+            type: 'pie',
+            data: {
+                labels: ['Listo', 'En Proceso', 'Pendiente'],
+                datasets: [{
+                    data: [
+                        parseInt(stats.completadas) || 0,
+                        parseInt(stats.en_proceso) || 0,
+                        parseInt(stats.pendientes) || 0
+                    ],
+                    backgroundColor: [
+                        '#27ae60',
+                        '#f39c12', 
+                        '#e74c3c'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                    hoverBorderWidth: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Estados de las Tareas',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                            }
+                        }
+                    }
                 },
-                title: {
-                    display: true,
-                    text: 'Estados de las Tareas'
+                animation: {
+                    animateRotate: true,
+                    animateScale: true,
+                    duration: 1000
                 }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error('Error creando gráfico estados:', error);
+    }
 }
 
 function createPhaseChart() {
-    const ctx = document.getElementById('graficoFases');
-    if (!ctx) return;
-    
-    const fases = window.chartData.estadisticas_por_fase;
-    
-    new Chart(ctx, {
-        type: 'horizontalBar',
-        data: {
-            labels: fases.map(f => f.fase_principal),
-            datasets: [{
-                label: 'Progreso (%)',
-                data: fases.map(f => parseFloat(f.avance_promedio)),
-                backgroundColor: 'rgba(52, 152, 219, 0.8)',
-                borderColor: 'rgba(52, 152, 219, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    max: 100,
-                    ticks: {
-                        callback: function(value) {
-                            return value + '%';
+    const canvas = document.getElementById('graficoFases');
+    if (!canvas || !window.chartData) return;
+
+    destroyChart('fases');
+
+    const fases = window.chartData.estadisticas_por_fase || [];
+    if (fases.length === 0) return;
+
+    try {
+        chartInstances.fases = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: fases.map(f => f.fase_principal.length > 25 ? 
+                    f.fase_principal.substring(0, 25) + '...' : f.fase_principal),
+                datasets: [{
+                    label: 'Progreso (%)',
+                    data: fases.map(f => parseFloat(f.avance_promedio) || 0),
+                    backgroundColor: 'rgba(52, 152, 219, 0.8)',
+                    borderColor: 'rgba(52, 152, 219, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
                         }
                     }
-                }
-            },
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Progreso por Fase Principal'
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Progreso por Fase Principal',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                const fullLabel = fases[context[0].dataIndex].fase_principal;
+                                return fullLabel;
+                            },
+                            label: function(context) {
+                                return 'Progreso: ' + context.parsed.x + '%';
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1200,
+                    easing: 'easeOutCubic'
                 }
             }
+        });
+    } catch (error) {
+        console.error('Error creando gráfico fases:', error);
+    }
+}
+
+// ========== INICIALIZACIÓN ==========
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🎯 Inicializando sistema de gráficos...');
+    
+    // Esperar a que Chart.js esté disponible
+    waitForChartJS(() => {
+        console.log('✅ Chart.js disponible, inicializando gráficos...');
+        
+        // Configurar Chart.js
+        Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+        Chart.defaults.color = '#666';
+        Chart.defaults.borderColor = 'rgba(0,0,0,0.1)';
+        
+        // Inicializar gráficos según la vista
+        initializeCharts();
+        
+        console.log('📊 Gráficos inicializados correctamente');
+    });
+});
+
+// ========== LIMPIEZA AL CAMBIAR DE PÁGINA ==========
+window.addEventListener('beforeunload', function() {
+    Object.keys(chartInstances).forEach(chartId => {
+        destroyChart(chartId);
+    });
+});
+
+// ========== REDIMENSIONAR GRÁFICOS ==========
+window.addEventListener('resize', function() {
+    Object.values(chartInstances).forEach(chart => {
+        if (chart && typeof chart.resize === 'function') {
+            chart.resize();
         }
     });
-}
+});
+
+console.log('🚀 Sistema de gráficos cargado');
 </script>
 
 <!-- Cargar scripts de funciones -->
