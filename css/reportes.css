@@ -1,0 +1,570 @@
+/**
+ * Estilos específicos para la sección de reportes
+ * Sistema de Gestión de Proyectos con Peso Ponderado
+ */
+
+/* === CONTENEDORES DE GRÁFICOS === */
+.chart-container {
+    position: relative;
+    height: 400px;
+    margin: 20px 0;
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.chart-container:hover {
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.chart-container canvas {
+    max-height: 100%;
+    border-radius: 8px;
+}
+
+/* Gráficos específicos */
+#graficoProgreso {
+    height: 300px !important;
+}
+
+#graficoTipos,
+#graficoEstados {
+    height: 300px !important;
+}
+
+#graficoFases {
+    height: 200px !important;
+}
+
+/* === MÉTRICAS DE RESUMEN === */
+.metrics-summary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 30px;
+    margin-bottom: 30px;
+    position: relative;
+    overflow: hidden;
+}
+
+.metrics-summary::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    transform: rotate(45deg);
+    transition: all 0.3s ease;
+    opacity: 0;
+}
+
+.metrics-summary:hover::before {
+    opacity: 1;
+    top: -30%;
+    right: -30%;
+}
+
+.metric-item {
+    text-align: center;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.metric-item:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-5px);
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.metric-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* === TARJETAS DE GRÁFICOS === */
+.report-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.report-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #3498db, #2ecc71);
+    border-radius: 15px 15px 0 0;
+}
+
+.report-card:hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    transform: translateY(-3px);
+}
+
+.report-card-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f8f9fa;
+}
+
+.report-card-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.report-card-title i {
+    margin-right: 10px;
+    color: #3498db;
+}
+
+.report-card-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.chart-export-btn {
+    background: linear-gradient(135deg, #74b9ff, #0984e3);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 15px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.chart-export-btn:hover {
+    background: linear-gradient(135deg, #0984e3, #74b9ff);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(116, 185, 255, 0.4);
+    color: white;
+}
+
+/* === TABLAS DE ANÁLISIS === */
+.analysis-table {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    margin-bottom: 25px;
+}
+
+.analysis-table .table {
+    margin-bottom: 0;
+}
+
+.analysis-table .table th {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    font-weight: 600;
+    border: none;
+    padding: 15px;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.analysis-table .table td {
+    padding: 15px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f3f4;
+    transition: background-color 0.3s ease;
+}
+
+.analysis-table .table tbody tr:hover td {
+    background-color: #f8f9fa;
+}
+
+.analysis-table .table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* === BARRAS DE PROGRESO MEJORADAS === */
+.progress-enhanced {
+    height: 25px;
+    border-radius: 12px;
+    background: #e9ecef;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.progress-bar-enhanced {
+    height: 100%;
+    background: linear-gradient(90deg, #28a745, #20c997);
+    border-radius: 12px;
+    position: relative;
+    transition: width 0.8s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.progress-bar-enhanced::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent);
+    border-radius: 12px 12px 0 0;
+}
+
+/* Estados específicos */
+.progress-bar-alto {
+    background: linear-gradient(90deg, #e74c3c, #c0392b);
+}
+
+.progress-bar-medio {
+    background: linear-gradient(90deg, #f39c12, #e67e22);
+}
+
+.progress-bar-bajo {
+    background: linear-gradient(90deg, #3498db, #2980b9);
+}
+
+/* === BADGES MEJORADOS === */
+.badge-peso {
+    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 8px rgba(108, 92, 231, 0.3);
+}
+
+.badge-fase {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-tipo-fase {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+}
+
+.badge-tipo-actividad {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+.badge-tipo-tarea {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+}
+
+/* === CONTROLES DE EXPORTACIÓN === */
+.export-controls {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 25px;
+    border: 1px solid #dee2e6;
+}
+
+.export-controls h5 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.export-btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.export-btn {
+    background: white;
+    border: 2px solid #dee2e6;
+    color: #495057;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.export-btn:hover {
+    border-color: #3498db;
+    color: #3498db;
+    background: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2);
+}
+
+.export-btn i {
+    font-size: 1.1rem;
+}
+
+/* === INDICADORES DE ESTADO === */
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-completada {
+    background: rgba(39, 174, 96, 0.1);
+    color: #27ae60;
+    border: 2px solid rgba(39, 174, 96, 0.3);
+}
+
+.status-proceso {
+    background: rgba(243, 156, 18, 0.1);
+    color: #f39c12;
+    border: 2px solid rgba(243, 156, 18, 0.3);
+}
+
+.status-pendiente {
+    background: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
+    border: 2px solid rgba(231, 76, 60, 0.3);
+}
+
+/* === LOADING STATES === */
+.chart-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin: 20px 0;
+}
+
+.chart-loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #e9ecef;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.chart-loading-text {
+    margin-left: 15px;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* === RESPONSIVE DESIGN === */
+@media (max-width: 768px) {
+    .metrics-summary {
+        padding: 20px;
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+    }
+    
+    .report-card {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .chart-container {
+        height: 300px;
+        padding: 15px;
+    }
+    
+    .export-btn-group {
+        flex-direction: column;
+    }
+    
+    .export-btn {
+        justify-content: center;
+    }
+    
+    .analysis-table .table th,
+    .analysis-table .table td {
+        padding: 10px 8px;
+        font-size: 0.85rem;
+    }
+    
+    .report-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .report-card-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
+@media (max-width: 576px) {
+    .metric-item {
+        margin-bottom: 15px;
+    }
+    
+    .metric-value {
+        font-size: 1.8rem;
+    }
+    
+    .chart-container {
+        height: 250px;
+        padding: 10px;
+    }
+    
+    .report-card-title {
+        font-size: 1.1rem;
+    }
+    
+    .analysis-table .table th,
+    .analysis-table .table td {
+        padding: 8px 6px;
+        font-size: 0.8rem;
+    }
+}
+
+/* === ANIMACIONES === */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.report-card,
+.chart-container,
+.analysis-table {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+.report-card:nth-child(1) { animation-delay: 0.1s; }
+.report-card:nth-child(2) { animation-delay: 0.2s; }
+.report-card:nth-child(3) { animation-delay: 0.3s; }
+.report-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* === TEMA OSCURO === */
+@media (prefers-color-scheme: dark) {
+    .report-card,
+    .chart-container,
+    .analysis-table {
+        background: #2d3748;
+        color: #e2e8f0;
+        border-color: #4a5568;
+    }
+    
+    .report-card-title {
+        color: #e2e8f0;
+    }
+    
+    .analysis-table .table td {
+        border-bottom-color: #4a5568;
+    }
+    
+    .analysis-table .table tbody tr:hover td {
+        background-color: #374151;
+    }
+    
+    .export-controls {
+        background: linear-gradient(135deg, #374151, #4a5568);
+        border-color: #6b7280;
+    }
+    
+    .export-btn {
+        background: #374151;
+        border-color: #6b7280;
+        color: #e2e8f0;
+    }
+    
+    .export-btn:hover {
+        background: #4a5568;
+        border-color: #3498db;
+    }
+}
+
+/* === PRINT STYLES === */
+@media print {
+    .chart-export-btn,
+    .export-controls,
+    .report-card-actions {
+        display: none !important;
+    }
+    
+    .report-card,
+    .chart-container {
+        box-shadow: none;
+        border: 1px solid #ccc;
+        page-break-inside: avoid;
+        margin-bottom: 20px;
+    }
+    
+    .metrics-summary {
+        background: #f5f5f5 !important;
+        color: #333 !important;
+    }
+    
+    .analysis-table .table th {
+        background: #f5f5f5 !important;
+        color: #333 !important;
+    }
+}
