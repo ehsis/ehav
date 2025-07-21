@@ -60,9 +60,9 @@ if ($proyecto_actual_id && isset($db)) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"
           integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous">
     
-    <!-- Chart.js for graphs -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js" 
-            integrity="sha384-6qiwyb4nERTEKXJy9DzYwdePxGNzOlnN9U+5aO6VdR4VyebdJ7WtF6fD2HzGm5LU" crossorigin="anonymous"></script>
+    <!-- Chart.js for graphs - VERSIÓN CORREGIDA -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js" 
+            integrity="sha384-7lePLdO2QqVGvEE8XjcpFwEOgf71MSyGIDOCJeGqeNaY9X8R8zWqd5nfJWxq93j6" crossorigin="anonymous"></script>
     
     <!-- Custom CSS -->
     <link href="css/style.css" rel="stylesheet">
@@ -236,6 +236,14 @@ if ($proyecto_actual_id && isset($db)) {
             top: 6px;
             outline: 2px solid #fff;
             outline-offset: 2px;
+        }
+        
+        /* Mejoras de rendimiento para gráficos */
+        canvas {
+            image-rendering: -webkit-crisp-edges;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
         }
     </style>
 </head>
@@ -506,7 +514,34 @@ if ($proyecto_actual_id && isset($db)) {
     <!-- Main content wrapper -->
     <main id="main-content" role="main">
 
+    <!-- Script para verificar disponibilidad de Chart.js -->
     <script>
+        // Verificar que Chart.js esté disponible
+        function verificarChartJS() {
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js no está disponible. Intentando cargar de respaldo...');
+                
+                // Cargar Chart.js de respaldo
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
+                script.onload = function() {
+                    console.log('Chart.js cargado desde respaldo');
+                    window.chartJSLoaded = true;
+                };
+                script.onerror = function() {
+                    console.error('Error al cargar Chart.js. Los gráficos no funcionarán.');
+                    window.chartJSLoaded = false;
+                };
+                document.head.appendChild(script);
+            } else {
+                console.log('Chart.js disponible');
+                window.chartJSLoaded = true;
+            }
+        }
+        
+        // Verificar al cargar la página
+        document.addEventListener('DOMContentLoaded', verificarChartJS);
+        
         // Header JavaScript functions
         
         // Funciones para los modales desde el menú
@@ -543,77 +578,6 @@ if ($proyecto_actual_id && isset($db)) {
             overlay.style.display = 'none';
         }
 
-        // Función para exportar reportes
-        function exportarReporte(proyectoId) {
-            showLoading('Generando reporte...');
-            window.open(`api/exportar.php?action=reporte_proyecto&proyecto_id=${proyectoId}&formato=html`, '_blank');
-            setTimeout(hideLoading, 2000);
-        }
-
-        // Función para importar datos del proyecto Cafeto
-        function importarDatosCafeto(proyectoId) {
-            if (confirm('¿Desea importar los datos de ejemplo del proyecto Cafeto? Esto reemplazará las tareas existentes.')) {
-                showLoading('Importando datos de ejemplo...');
-                
-                fetch('api/proyectos.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'importar_excel_cafeto',
-                        proyecto_id: proyectoId
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    hideLoading();
-                    if (data.success) {
-                        mostrarNotificacion('Datos del proyecto Cafeto importados exitosamente', 'success');
-                        setTimeout(() => location.reload(), 1500);
-                    } else {
-                        mostrarNotificacion('Error al importar datos: ' + (data.message || 'Error desconocido'), 'error');
-                    }
-                })
-                .catch(error => {
-                    hideLoading();
-                    console.error('Error:', error);
-                    mostrarNotificacion('Error al importar datos', 'error');
-                });
-            }
-        }
-
-        // Función para recalcular progreso
-        function recalcularProgreso(proyectoId) {
-            showLoading('Recalculando progreso...');
-            
-            fetch('api/proyectos.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    action: 'recalcular_progreso',
-                    proyecto_id: proyectoId
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                hideLoading();
-                if (data.success) {
-                    mostrarNotificacion('Progreso recalculado exitosamente', 'success');
-                    setTimeout(() => location.reload(), 1000);
-                } else {
-                    mostrarNotificacion('Error al recalcular progreso', 'error');
-                }
-            })
-            .catch(error => {
-                hideLoading();
-                console.error('Error:', error);
-                mostrarNotificacion('Error al recalcular progreso', 'error');
-            });
-        }
-
         // Interceptar navegación para mostrar loading
         document.addEventListener('DOMContentLoaded', function() {
             const links = document.querySelectorAll('a[href*="?"]');
@@ -631,8 +595,8 @@ if ($proyecto_actual_id && isset($db)) {
 
             // Keyboard shortcuts
             document.addEventListener('keydown', function(e) {
-                if (e.ctrlKey) {
-                    switch(e.key) {
+                if (e.ctrlKey || e.metaKey) {
+                    switch(e.key.toLowerCase()) {
                         case 'n':
                             e.preventDefault();
                             mostrarModalNuevaTarea();
@@ -654,7 +618,7 @@ if ($proyecto_actual_id && isset($db)) {
         // Función básica de notificación (se sobrescribe en proyecto-functions.js)
         if (typeof mostrarNotificacion === 'undefined') {
             window.mostrarNotificacion = function(mensaje, tipo = 'info') {
-                alert(mensaje); // Fallback básico
+                console.log(`${tipo.toUpperCase()}: ${mensaje}`);
             };
         }
 
@@ -662,6 +626,27 @@ if ($proyecto_actual_id && isset($db)) {
         if (typeof exportarProyecto === 'undefined') {
             window.exportarProyecto = function(proyectoId, formato = 'csv') {
                 window.open(`api/exportar.php?action=proyecto&proyecto_id=${proyectoId}&formato=${formato}`, '_blank');
+            };
+        }
+
+        // Función básica de exportar reporte (se sobrescribe en proyecto-functions.js)
+        if (typeof exportarReporte === 'undefined') {
+            window.exportarReporte = function(proyectoId) {
+                window.open(`api/exportar.php?action=reporte_proyecto&proyecto_id=${proyectoId}&formato=html`, '_blank');
+            };
+        }
+
+        // Función básica de importar datos Cafeto (se sobrescribe en proyecto-functions.js)
+        if (typeof importarDatosCafeto === 'undefined') {
+            window.importarDatosCafeto = function(proyectoId) {
+                console.log('Función importarDatosCafeto no disponible aún');
+            };
+        }
+
+        // Función básica de recalcular progreso (se sobrescribe en proyecto-functions.js)
+        if (typeof recalcularProgreso === 'undefined') {
+            window.recalcularProgreso = function(proyectoId) {
+                console.log('Función recalcularProgreso no disponible aún');
             };
         }
     </script>
