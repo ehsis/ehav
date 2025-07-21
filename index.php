@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'config/database.php';
+require_once 'includes/includes.php';
 
 $database = new Database();
 $db = $database->getConnection();
@@ -280,8 +281,8 @@ include 'includes/header.php';
                             <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaTarea">
                                 <i class="fas fa-plus"></i> Nueva Tarea
                             </button>
-                            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalImportarExcel">
-                                <i class="fas fa-file-excel"></i> Importar Excel
+                            <button class="btn btn-sm btn-success" onclick="importarDatosCafeto(<?= $proyecto_actual_id ?>)">
+                                <i class="fas fa-file-excel"></i> Datos Ejemplo
                             </button>
                         </div>
                     </div>
@@ -367,8 +368,8 @@ include 'includes/header.php';
                         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaTarea">
                             <i class="fas fa-plus"></i> Nueva Tarea
                         </button>
-                        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalImportarExcel">
-                            <i class="fas fa-file-excel"></i> Importar Excel
+                        <button class="btn btn-success" onclick="importarDatosCafeto(<?= $proyecto_actual_id ?>)">
+                            <i class="fas fa-file-excel"></i> Datos Ejemplo
                         </button>
                     </div>
                 </div>
@@ -493,7 +494,7 @@ include 'includes/header.php';
         </div>
 
     <?php elseif ($view === 'reportes'): ?>
-        <!-- Vista de Reportes -->
+        <!-- Vista de Reportes CORREGIDA -->
         <div class="row">
             <div class="col-12">
                 <h2><i class="fas fa-chart-bar"></i> Reportes y Análisis - <?= htmlspecialchars($proyecto_actual['nombre']) ?></h2>
@@ -501,7 +502,38 @@ include 'includes/header.php';
             </div>
         </div>
 
-        <!-- Gráficos y reportes -->
+        <!-- Resumen ejecutivo -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5><i class="fas fa-chart-line"></i> Resumen Ejecutivo</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 text-center">
+                                <h3 class="text-primary"><?= number_format($stats['avance_promedio'], 1) ?>%</h3>
+                                <p class="text-muted">Progreso Ponderado</p>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <h3 class="text-info"><?= number_format($stats['peso_total'], 4) ?></h3>
+                                <p class="text-muted">Peso Total</p>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <h3 class="text-success"><?= $stats['completadas'] ?></h3>
+                                <p class="text-muted">Tareas Completadas</p>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <h3 class="text-danger"><?= $stats['pendientes'] ?></h3>
+                                <p class="text-muted">Tareas Pendientes</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos principales -->
         <div class="row mb-4">
             <div class="col-md-6 mb-3">
                 <div class="card">
@@ -509,21 +541,37 @@ include 'includes/header.php';
                         <h5><i class="fas fa-chart-bar"></i> Progreso por Tipo (Ponderado)</h5>
                     </div>
                     <div class="card-body">
-                        <canvas id="graficoTipos" width="400" height="300"></canvas>
+                        <canvas id="graficoTipos" height="300"></canvas>
                     </div>
                 </div>
             </div>
             <div class="col-md-6 mb-3">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="fas fa-list-alt"></i> Distribución por Estado</h5>
+                        <h5><i class="fas fa-chart-pie"></i> Distribución por Estado</h5>
                     </div>
                     <div class="card-body">
-                        <canvas id="graficoEstados" width="400" height="300"></canvas>
+                        <canvas id="graficoEstados" height="300"></canvas>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Gráfico de fases -->
+        <?php if (!empty($estadisticas_por_fase)): ?>
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-area"></i> Progreso por Fases Principales</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="graficoFases" height="150"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <!-- Tabla de estadísticas detalladas -->
         <div class="row">
@@ -535,7 +583,7 @@ include 'includes/header.php';
                     <div class="card-body">
                         <div class="table-responsive">
                             <table class="table table-striped">
-                                <thead>
+                                <thead class="table-dark">
                                     <tr>
                                         <th>Fase Principal</th>
                                         <th>Total Tareas</th>
@@ -566,6 +614,33 @@ include 'includes/header.php';
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Opciones de exportación -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-download"></i> Opciones de Exportación</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-outline-primary" onclick="exportarProyecto(<?= $proyecto_actual_id ?>, 'csv')">
+                                <i class="fas fa-file-csv"></i> CSV
+                            </button>
+                            <button class="btn btn-outline-success" onclick="exportarProyecto(<?= $proyecto_actual_id ?>, 'json')">
+                                <i class="fas fa-file-code"></i> JSON
+                            </button>
+                            <button class="btn btn-outline-info" onclick="exportarReporte(<?= $proyecto_actual_id ?>)">
+                                <i class="fas fa-file-alt"></i> Reporte HTML
+                            </button>
+                            <button class="btn btn-outline-warning" onclick="exportarProyecto(<?= $proyecto_actual_id ?>, 'xml')">
+                                <i class="fas fa-file-code"></i> XML
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -658,7 +733,16 @@ include 'includes/header.php';
 <!-- Incluir modales -->
 <?php include 'includes/modales.php'; ?>
 
+<!-- Variables JavaScript para los gráficos -->
 <script>
+// Variables globales con datos para los gráficos
+window.chartData = {
+    stats: <?= json_encode($stats) ?>,
+    estadisticas_por_tipo: <?= json_encode($estadisticas_por_tipo) ?>,
+    estadisticas_por_fase: <?= json_encode($estadisticas_por_fase) ?>,
+    proyecto_id: <?= $proyecto_actual_id ?>
+};
+
 // Función para cambiar de proyecto
 function cambiarProyecto(proyectoId) {
     window.location.href = '?proyecto=' + proyectoId + '&view=<?= $view ?>';
@@ -695,106 +779,201 @@ function filtrarTabla() {
     });
 }
 
-// Gráfico de progreso para dashboard
-<?php if ($view === 'dashboard'): ?>
+// Inicialización de gráficos cuando se carga la página
 document.addEventListener('DOMContentLoaded', function() {
-    const ctx = document.getElementById('graficoProgreso');
-    if (ctx) {
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Completadas', 'En Proceso', 'Pendientes'],
-                datasets: [{
-                    data: [<?= $stats['completadas'] ?>, <?= $stats['en_proceso'] ?>, <?= $stats['pendientes'] ?>],
-                    backgroundColor: [
-                        '#27ae60',
-                        '#f39c12',
-                        '#e74c3c'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    },
-                    title: {
-                        display: true,
-                        text: 'Distribución de Tareas'
-                    }
-                }
-            }
-        });
+    // Solo inicializar gráficos si Chart.js está disponible
+    if (typeof Chart !== 'undefined') {
+        initializeCharts();
+    } else {
+        console.warn('Chart.js no está disponible. Los gráficos no se mostrarán.');
     }
 });
-<?php endif; ?>
 
-<?php if ($view === 'reportes'): ?>
-// Gráficos para reportes
-document.addEventListener('DOMContentLoaded', function() {
-    // Gráfico por tipos
-    const ctxTipos = document.getElementById('graficoTipos');
-    if (ctxTipos) {
-        new Chart(ctxTipos, {
-            type: 'bar',
-            data: {
-                labels: [<?php foreach($estadisticas_por_tipo as $tipo): ?>'<?= $tipo['tipo'] ?>',<?php endforeach; ?>],
-                datasets: [{
-                    label: 'Progreso Ponderado (%)',
-                    data: [<?php foreach($estadisticas_por_tipo as $tipo): ?><?= number_format($tipo['avance_promedio'], 2) ?>,<?php endforeach; ?>],
-                    backgroundColor: [
-                        '#2c3e50',
-                        '#3498db', 
-                        '#f39c12'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: {
-                            callback: function(value) {
-                                return value + '%';
-                            }
+function initializeCharts() {
+    const view = '<?= $view ?>';
+    
+    if (view === 'dashboard') {
+        createDashboardChart();
+    } else if (view === 'reportes') {
+        createReportCharts();
+    }
+}
+
+// Gráfico del dashboard
+function createDashboardChart() {
+    const ctx = document.getElementById('graficoProgreso');
+    if (!ctx) return;
+    
+    const stats = window.chartData.stats;
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Completadas', 'En Proceso', 'Pendientes'],
+            datasets: [{
+                data: [stats.completadas, stats.en_proceso, stats.pendientes],
+                backgroundColor: [
+                    '#27ae60',
+                    '#f39c12',
+                    '#e74c3c'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                title: {
+                    display: true,
+                    text: 'Distribución de Tareas'
+                }
+            }
+        }
+    });
+}
+
+// Gráficos de reportes
+function createReportCharts() {
+    createTypeChart();
+    createStatusChart();
+    if (window.chartData.estadisticas_por_fase.length > 0) {
+        createPhaseChart();
+    }
+}
+
+function createTypeChart() {
+    const ctx = document.getElementById('graficoTipos');
+    if (!ctx) return;
+    
+    const tipos = window.chartData.estadisticas_por_tipo;
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: tipos.map(t => t.tipo),
+            datasets: [{
+                label: 'Progreso Ponderado (%)',
+                data: tipos.map(t => parseFloat(t.avance_promedio)),
+                backgroundColor: [
+                    '#2c3e50',
+                    '#3498db', 
+                    '#f39c12'
+                ],
+                borderColor: [
+                    '#34495e',
+                    '#2980b9',
+                    '#e67e22'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
                         }
                     }
                 }
-            }
-        });
-    }
-    
-    // Gráfico por estados
-    const ctxEstados = document.getElementById('graficoEstados');
-    if (ctxEstados) {
-        new Chart(ctxEstados, {
-            type: 'pie',
-            data: {
-                labels: ['Listo', 'En Proceso', 'Pendiente'],
-                datasets: [{
-                    data: [<?= $stats['completadas'] ?>, <?= $stats['en_proceso'] ?>, <?= $stats['pendientes'] ?>],
-                    backgroundColor: [
-                        '#27ae60',
-                        '#f39c12', 
-                        '#e74c3c'
-                    ]
-                }]
             },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Progreso por Tipo de Tarea'
                 }
             }
-        });
-    }
-});
-<?php endif; ?>
+        }
+    });
+}
+
+function createStatusChart() {
+    const ctx = document.getElementById('graficoEstados');
+    if (!ctx) return;
+    
+    const stats = window.chartData.stats;
+    
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['Listo', 'En Proceso', 'Pendiente'],
+            datasets: [{
+                data: [stats.completadas, stats.en_proceso, stats.pendientes],
+                backgroundColor: [
+                    '#27ae60',
+                    '#f39c12', 
+                    '#e74c3c'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                title: {
+                    display: true,
+                    text: 'Estados de las Tareas'
+                }
+            }
+        }
+    });
+}
+
+function createPhaseChart() {
+    const ctx = document.getElementById('graficoFases');
+    if (!ctx) return;
+    
+    const fases = window.chartData.estadisticas_por_fase;
+    
+    new Chart(ctx, {
+        type: 'horizontalBar',
+        data: {
+            labels: fases.map(f => f.fase_principal),
+            datasets: [{
+                label: 'Progreso (%)',
+                data: fases.map(f => parseFloat(f.avance_promedio)),
+                backgroundColor: 'rgba(52, 152, 219, 0.8)',
+                borderColor: 'rgba(52, 152, 219, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Progreso por Fase Principal'
+                }
+            }
+        }
+    });
+}
 </script>
 
 <!-- Cargar scripts de funciones -->
