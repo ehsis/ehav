@@ -1,13 +1,13 @@
 <?php
 /**
  * Utilidades y funciones de validación para el Sistema de Gestión de Proyectos
- * Actualizado para manejar peso de actividad y cálculos ponderados
+ * MEJORADO para manejar días totales configurables y peso de actividad en PORCENTAJES (0%-100%)
  */
 
 class Validator {
     
     /**
-     * Validar datos de proyecto
+     * Validar datos de proyecto - MEJORADO con días totales
      */
     public static function validarProyecto($datos) {
         $errores = [];
@@ -15,6 +15,15 @@ class Validator {
         // Nombre es requerido
         if (empty($datos['nombre']) || strlen(trim($datos['nombre'])) < 3) {
             $errores[] = 'El nombre del proyecto debe tener al menos 3 caracteres';
+        }
+        
+        // NUEVO: Validar días totales
+        if (isset($datos['dias_totales'])) {
+            if (!is_numeric($datos['dias_totales']) || $datos['dias_totales'] <= 0) {
+                $errores[] = 'Los días totales deben ser un número positivo';
+            } elseif ($datos['dias_totales'] > 3650) { // Máximo 10 años
+                $errores[] = 'Los días totales no pueden exceder 3650 días (10 años)';
+            }
         }
         
         // Validar fechas si están presentes
@@ -52,7 +61,7 @@ class Validator {
     }
     
     /**
-     * Validar datos de tarea con peso de actividad
+     * Validar datos de tarea con peso de actividad EN PORCENTAJES (0%-100%) - MEJORADO
      */
     public static function validarTarea($datos) {
         $errores = [];
@@ -68,10 +77,12 @@ class Validator {
             $errores[] = 'El tipo de tarea no es válido';
         }
         
-        // Duración debe ser positiva
+        // MEJORADO: Duración debe ser positiva y puede ser fraccionaria
         if (!empty($datos['duracion_dias'])) {
-            if (!is_numeric($datos['duracion_dias']) || $datos['duracion_dias'] < 0) {
-                $errores[] = 'La duración debe ser un número positivo';
+            if (!is_numeric($datos['duracion_dias']) || $datos['duracion_dias'] <= 0) {
+                $errores[] = 'La duración debe ser un número positivo (puede incluir decimales)';
+            } elseif ($datos['duracion_dias'] > 365) {
+                $errores[] = 'La duración no puede exceder 365 días por tarea';
             }
         }
         
@@ -90,12 +101,12 @@ class Validator {
             }
         }
         
-        // Validar peso de actividad
+        // CORREGIDO: Validar peso de actividad EN PORCENTAJES (0% - 100%)
         if (isset($datos['peso_actividad'])) {
             if (!is_numeric($datos['peso_actividad']) || 
                 $datos['peso_actividad'] < 0 || 
-                $datos['peso_actividad'] > 1) {
-                $errores[] = 'El peso de actividad debe estar entre 0.0000 y 1.0000';
+                $datos['peso_actividad'] > 100) {
+                $errores[] = 'El peso de actividad debe estar entre 0% y 100%';
             }
         }
         
@@ -111,6 +122,57 @@ class Validator {
         }
         
         return $errores;
+    }
+    
+    /**
+     * NUEVO: Validar configuración de días totales
+     */
+    public static function validarDiasTotales($dias_totales, $dias_actuales_usados = 0) {
+        $errores = [];
+        $warnings = [];
+        
+        if (!is_numeric($dias_totales) || $días_totales <= 0) {
+            $errores[] = 'Los días totales deben ser un número positivo';
+            return ['errores' => $errores, 'warnings' => $warnings];
+        }
+        
+        $dias_totales = floatval($dias_totales);
+        
+        // Validaciones de rango
+        if ($dias_totales < 1) {
+            $errores[] = 'El proyecto debe tener al menos 1 día';
+        } elseif ($dias_totales > 3650) {
+            $errores[] = 'Los días totales no pueden exceder 3650 días (10 años)';
+        }
+        
+        // Validar consistencia con días ya utilizados
+        if ($dias_actuales_usados > 0) {
+            if ($dias_totales < $dias_actuales_usados) {
+                $errores[] = sprintf(
+                    'Los días totales (%.2f) no pueden ser menores a los días ya planificados (%.2f)',
+                    $dias_totales,
+                    $dias_actuales_usados
+                );
+            } elseif ($dias_totales < $dias_actuales_usados * 1.2) {
+                $warnings[] = sprintf(
+                    'Margen muy ajustado: solo %.2f días disponibles para nuevas tareas',
+                    $dias_totales - $dias_actuales_usados
+                );
+            }
+        }
+        
+        // Sugerencias según el tamaño del proyecto
+        if ($dias_totales < 30) {
+            $warnings[] = 'Proyecto de corta duración (menos de 1 mes)';
+        } elseif ($dias_totales > 365) {
+            $warnings[] = 'Proyecto de larga duración (más de 1 año) - considera dividir en fases';
+        }
+        
+        return [
+            'errores' => $errores,
+            'warnings' => $warnings,
+            'valido' => empty($errores)
+        ];
     }
     
     /**
@@ -135,7 +197,7 @@ class Validator {
     }
     
     /**
-     * Validar entrada de usuario para prevenir XSS y SQL injection
+     * Validar entrada de usuario para prevenir XSS y SQL injection - MEJORADO
      */
     public static function validarEntrada($input, $tipo = 'string') {
         switch ($tipo) {
@@ -143,31 +205,44 @@ class Validator {
                 return filter_var($input, FILTER_VALIDATE_INT);
             case 'float':
                 return filter_var($input, FILTER_VALIDATE_FLOAT);
+            case 'dias_fraccionarios': // NUEVO: Para días con decimales
+                $dias = filter_var($input, FILTER_VALIDATE_FLOAT);
+                return ($dias !== false && $dias > 0 && $dias <= 365) ? $dias : false;
             case 'email':
                 return filter_var($input, FILTER_VALIDATE_EMAIL);
             case 'url':
                 return filter_var($input, FILTER_VALIDATE_URL);
             case 'date':
                 return self::validarFecha($input) ? $input : false;
-            case 'peso':
+            case 'peso_porcentaje': // NUEVO: Validación específica para porcentajes
                 $peso = filter_var($input, FILTER_VALIDATE_FLOAT);
-                return ($peso !== false && $peso >= 0 && $peso <= 1) ? $peso : false;
+                return ($peso !== false && $peso >= 0 && $peso <= 100) ? $peso : false;
             default:
                 return self::limpiarDatos($input);
         }
     }
     
     /**
-     * Validar consistencia de pesos en un proyecto
+     * Validar consistencia de pesos en un proyecto (DEBEN SUMAR 100%) - MEJORADO
      */
-    public static function validarPesosProyecto($tareas) {
+    public static function validarPesosProyecto($tareas, $tolerancia = 2.0) {
         $errores = [];
+        $warnings = [];
         $peso_total = 0;
         $pesos_por_fase = [];
+        $tareas_sin_peso = 0;
+        $tareas_peso_alto = 0;
         
         foreach ($tareas as $tarea) {
             $peso = floatval($tarea['peso_actividad']);
             $peso_total += $peso;
+            
+            // Contar tareas problemáticas
+            if ($peso == 0) {
+                $tareas_sin_peso++;
+            } elseif ($peso > 25) {
+                $tareas_peso_alto++;
+            }
             
             $fase = $tarea['fase_principal'] ?? 'Sin fase';
             if (!isset($pesos_por_fase[$fase])) {
@@ -176,24 +251,152 @@ class Validator {
             $pesos_por_fase[$fase] += $peso;
         }
         
-        // Advertencia si el peso total se desvía mucho de 1.0
-        if ($peso_total > 1.2) {
-            $errores[] = "El peso total ({$peso_total}) es mayor a 1.2, puede indicar sobreponderación";
+        // MEJORADO: Validaciones más granulares
+        $diferencia = abs($peso_total - 100);
+        
+        if ($diferencia > $tolerancia) {
+            if ($peso_total > 100) {
+                $errores[] = sprintf("Sobreponderación: el peso total (%.2f%%) excede el 100%% por %.2f%%", 
+                                   $peso_total, $peso_total - 100);
+            } else {
+                $errores[] = sprintf("Subponderación: el peso total (%.2f%%) es menor al 100%% por %.2f%%", 
+                                   $peso_total, 100 - $peso_total);
+            }
+        } elseif ($diferencia > 0.5) {
+            $warnings[] = sprintf("Ligera desviación: el peso total es %.2f%% (diferencia: %.2f%%)", 
+                                $peso_total, $diferencia);
         }
         
-        if ($peso_total < 0.8 && count($tareas) > 5) {
-            $errores[] = "El peso total ({$peso_total}) es menor a 0.8, las tareas pueden estar subponderadas";
+        if ($tareas_sin_peso > 0) {
+            $warnings[] = sprintf("%d tareas sin peso asignado", $tareas_sin_peso);
+        }
+        
+        if ($tareas_peso_alto > 0) {
+            $warnings[] = sprintf("%d tareas con peso mayor al 25%% (considerar subdividir)", $tareas_peso_alto);
+        }
+        
+        // Validar distribución por fases
+        foreach ($pesos_por_fase as $fase => $peso_fase) {
+            if ($peso_fase > 50 && $fase !== 'Sin fase') {
+                $warnings[] = sprintf("La fase '%s' concentra %.1f%% del peso total", $fase, $peso_fase);
+            }
         }
         
         return [
             'errores' => $errores,
+            'warnings' => $warnings,
             'peso_total' => $peso_total,
-            'pesos_por_fase' => $pesos_por_fase
+            'pesos_por_fase' => $pesos_por_fase,
+            'tareas_sin_peso' => $tareas_sin_peso,
+            'tareas_peso_alto' => $tareas_peso_alto,
+            'diferencia_100' => $diferencia,
+            'valido' => empty($errores)
         ];
     }
 }
 
 class Utils {
+    
+    /**
+     * NUEVO: Calcular peso automático basado en días totales del proyecto
+     */
+    public static function calcularPesoAutomatico($duracion_dias, $dias_totales_proyecto) {
+        if ($dias_totales_proyecto <= 0) return 0.0;
+        
+        $porcentaje = (floatval($duracion_dias) / floatval($dias_totales_proyecto)) * 100;
+        return round($porcentaje, 4); // 4 decimales para mayor precisión
+    }
+    
+    /**
+     * NUEVO: Validar consistencia de días en un proyecto
+     */
+    public static function validarConsistenciaDias($tareas, $dias_totales_proyecto) {
+        $total_dias_planificados = array_sum(array_column($tareas, 'duracion_dias'));
+        $diferencia = $dias_totales_proyecto - $total_dias_planificados;
+        $porcentaje_utilizado = ($total_dias_planificados / $dias_totales_proyecto) * 100;
+        
+        $nivel_consistencia = 'excelente';
+        $mensaje = '';
+        
+        if (abs($diferencia) <= 0.5) {
+            $nivel_consistencia = 'excelente';
+            $mensaje = 'Los días están perfectamente distribuidos';
+        } elseif (abs($diferencia) <= 2.0) {
+            $nivel_consistencia = 'bueno';
+            $mensaje = sprintf('Ligera diferencia de %.2f días', abs($diferencia));
+        } elseif ($diferencia > 2.0) {
+            $nivel_consistencia = 'sobrante';
+            $mensaje = sprintf('%.2f días disponibles para nuevas tareas', $diferencia);
+        } else {
+            $nivel_consistencia = 'exceso';
+            $mensaje = sprintf('Exceso de %.2f días - considera aumentar días totales', abs($diferencia));
+        }
+        
+        return [
+            'dias_totales' => $dias_totales_proyecto,
+            'dias_planificados' => $total_dias_planificados,
+            'diferencia' => $diferencia,
+            'porcentaje_utilizado' => $porcentaje_utilizado,
+            'nivel_consistencia' => $nivel_consistencia,
+            'mensaje' => $mensaje,
+            'necesita_accion' => abs($diferencia) > 2.0
+        ];
+    }
+    
+    /**
+     * NUEVO: Sugerir ajustes para días del proyecto
+     */
+    public static function sugerirAjustesDias($analisis_consistencia, $tareas) {
+        $sugerencias = [];
+        
+        if ($analisis_consistencia['nivel_consistencia'] === 'exceso') {
+            $sugerencias[] = [
+                'tipo' => 'aumentar_dias_totales',
+                'descripcion' => sprintf('Aumentar días totales a %.0f días', 
+                                       $analisis_consistencia['dias_planificados'] + 5),
+                'impacto' => 'Permitirá planificación más holgada'
+            ];
+            
+            $sugerencias[] = [
+                'tipo' => 'reducir_duracion_tareas',
+                'descripcion' => 'Reducir duración de tareas menos críticas',
+                'impacto' => 'Optimizará el cronograma actual'
+            ];
+        } elseif ($analisis_consistencia['nivel_consistencia'] === 'sobrante') {
+            $dias_sobrantes = $analisis_consistencia['diferencia'];
+            
+            if ($dias_sobrantes > 10) {
+                $sugerencias[] = [
+                    'tipo' => 'agregar_tareas',
+                    'descripcion' => sprintf('Agregar tareas de revisión o calidad (%.1f días disponibles)', 
+                                           $dias_sobrantes),
+                    'impacto' => 'Mejorará la calidad del proyecto'
+                ];
+            }
+            
+            $sugerencias[] = [
+                'tipo' => 'buffer_tiempo',
+                'descripcion' => 'Mantener días como buffer para imprevistos',
+                'impacto' => 'Reducirá riesgos de retrasos'
+            ];
+        }
+        
+        // Analizar tareas con pesos desproporcionados
+        $tareas_largas = array_filter($tareas, function($t) {
+            return floatval($t['duracion_dias']) > 10;
+        });
+        
+        if (!empty($tareas_largas)) {
+            $sugerencias[] = [
+                'tipo' => 'subdividir_tareas',
+                'descripcion' => sprintf('Considerar subdividir %d tareas de larga duración', 
+                                       count($tareas_largas)),
+                'impacto' => 'Mejorará el control y seguimiento'
+            ];
+        }
+        
+        return $sugerencias;
+    }
     
     /**
      * Formatear fecha para mostrar
@@ -218,6 +421,29 @@ class Utils {
     }
     
     /**
+     * NUEVO: Formatear días con decimales de forma legible
+     */
+    public static function formatearDias($dias, $mostrar_unidad = true) {
+        $dias_num = floatval($dias);
+        
+        if ($dias_num == 0) {
+            return $mostrar_unidad ? '0 días' : '0';
+        }
+        
+        // Si es un número entero, no mostrar decimales
+        if ($dias_num == floor($dias_num)) {
+            $formato = number_format($dias_num, 0);
+        } else {
+            $formato = number_format($dias_num, 2);
+        }
+        
+        if (!$mostrar_unidad) return $formato;
+        
+        $unidad = ($dias_num == 1) ? 'día' : 'días';
+        return $formato . ' ' . $unidad;
+    }
+    
+    /**
      * Formatear moneda
      */
     public static function formatearMoneda($cantidad, $moneda = '₡') {
@@ -225,10 +451,10 @@ class Utils {
     }
     
     /**
-     * Formatear peso de actividad
+     * CORREGIDO: Formatear peso de actividad como PORCENTAJE
      */
-    public static function formatearPeso($peso, $decimales = 4) {
-        return number_format(floatval($peso), $decimales, '.', '');
+    public static function formatearPeso($peso, $decimales = 2) {
+        return number_format(floatval($peso), $decimales, '.', '') . '%';
     }
     
     /**
@@ -272,6 +498,19 @@ class Utils {
     }
     
     /**
+     * NUEVO: Generar color basado en nivel de peso
+     */
+    public static function colorPorPeso($peso) {
+        $peso_num = floatval($peso);
+        
+        if ($peso_num === 0) return '#6c757d';      // Gris - sin peso
+        if ($peso_num <= 5) return '#28a745';       // Verde - peso bajo
+        if ($peso_num <= 15) return '#17a2b8';      // Azul - peso normal
+        if ($peso_num <= 25) return '#ffc107';      // Amarillo - peso alto
+        return '#dc3545';                           // Rojo - peso muy alto
+    }
+    
+    /**
      * Generar color basado en tipo
      */
     public static function colorPorTipo($tipo) {
@@ -285,7 +524,7 @@ class Utils {
     }
     
     /**
-     * Calcular porcentaje de progreso del proyecto usando peso ponderado
+     * CORREGIDO: Calcular porcentaje de progreso del proyecto usando peso ponderado EN PORCENTAJES
      */
     public static function calcularProgresoProyectoPonderado($tareas) {
         if (empty($tareas)) return 0;
@@ -294,7 +533,7 @@ class Utils {
         $avance_ponderado = 0;
         
         foreach ($tareas as $tarea) {
-            $peso = floatval($tarea['peso_actividad']);
+            $peso = floatval($tarea['peso_actividad']); // Ya en porcentajes
             $peso_total += $peso;
             
             if ($tarea['estado'] === 'Listo') {
@@ -304,6 +543,7 @@ class Utils {
             }
         }
         
+        // CORREGIDO: Ya no dividimos por 100 porque el peso ya está en porcentajes
         return $peso_total > 0 ? ($avance_ponderado / $peso_total) * 100 : 0;
     }
     
@@ -359,7 +599,7 @@ class Utils {
     }
     
     /**
-     * Generar reporte de estadísticas con peso ponderado
+     * MEJORADO: Generar reporte de estadísticas con peso ponderado EN PORCENTAJES e información de días
      */
     public static function generarReporteEstadisticas($proyecto, $tareas) {
         $stats = [
@@ -376,6 +616,9 @@ class Utils {
             'peso_total' => 0,
             'avance_ponderado_total' => 0,
             'duracion_total' => 0,
+            'dias_totales_proyecto' => floatval($proyecto['dias_totales'] ?? 56), // NUEVO
+            'diferencia_dias' => 0, // NUEVO
+            'porcentaje_dias_usado' => 0, // NUEVO
             'contratos' => [
                 'normal' => 0,
                 'clave' => 0
@@ -386,6 +629,11 @@ class Utils {
                 'fin_estimada' => null,
                 'primera_tarea' => null,
                 'ultima_tarea' => null
+            ],
+            'consistencia' => [ // NUEVO
+                'pesos_ok' => true,
+                'dias_ok' => true,
+                'alertas' => []
             ]
         ];
         
@@ -432,8 +680,8 @@ class Utils {
                 $stats['contratos']['normal']++;
             }
             
-            // Cálculos ponderados
-            $peso = floatval($tarea['peso_actividad']);
+            // CORREGIDO: Cálculos ponderados con peso EN PORCENTAJES
+            $peso = floatval($tarea['peso_actividad']); // Ya en porcentajes
             $peso_total += $peso;
             
             if ($tarea['estado'] === 'Listo') {
@@ -443,7 +691,7 @@ class Utils {
             }
             
             $total_progreso += floatval($tarea['porcentaje_avance']);
-            $stats['duracion_total'] += intval($tarea['duracion_dias']);
+            $stats['duracion_total'] += floatval($tarea['duracion_dias']); // MEJORADO: Permite decimales
             
             // Agrupar por fase principal
             $fase = $tarea['fase_principal'] ?? 'Sin fase';
@@ -452,12 +700,14 @@ class Utils {
                     'nombre' => $fase,
                     'total_tareas' => 0,
                     'peso_total' => 0,
+                    'duracion_total' => 0, // NUEVO
                     'completadas' => 0,
                     'progreso' => 0
                 ];
             }
             $fases_info[$fase]['total_tareas']++;
             $fases_info[$fase]['peso_total'] += $peso;
+            $fases_info[$fase]['duracion_total'] += floatval($tarea['duracion_dias']); // NUEVO
             if ($tarea['estado'] === 'Listo') {
                 $fases_info[$fase]['completadas']++;
             }
@@ -471,11 +721,34 @@ class Utils {
             }
         }
         
-        // Calcular progresos
+        // CORREGIDO: Calcular progresos con porcentajes
         $stats['progreso_promedio'] = count($tareas) > 0 ? round($total_progreso / count($tareas), 2) : 0;
         $stats['progreso_ponderado'] = $peso_total > 0 ? round(($avance_ponderado / $peso_total) * 100, 2) : 0;
-        $stats['peso_total'] = $peso_total;
-        $stats['avance_ponderado_total'] = $avance_ponderado;
+        $stats['peso_total'] = $peso_total; // Ya en porcentajes
+        $stats['avance_ponderado_total'] = $avance_ponderado; // Ya en porcentajes
+        
+        // NUEVO: Cálculos de consistencia de días
+        $stats['diferencia_dias'] = $stats['dias_totales_proyecto'] - $stats['duracion_total'];
+        $stats['porcentaje_dias_usado'] = $stats['dias_totales_proyecto'] > 0 ? 
+            ($stats['duracion_total'] / $stats['dias_totales_proyecto']) * 100 : 0;
+        
+        // NUEVO: Análisis de consistencia
+        $stats['consistencia']['pesos_ok'] = abs($peso_total - 100) <= 2.0;
+        $stats['consistencia']['dias_ok'] = abs($stats['diferencia_dias']) <= 2.0;
+        
+        if (!$stats['consistencia']['pesos_ok']) {
+            $stats['consistencia']['alertas'][] = sprintf(
+                'Peso total: %.2f%% (diferencia: %+.2f%%)', 
+                $peso_total, $peso_total - 100
+            );
+        }
+        
+        if (!$stats['consistencia']['dias_ok']) {
+            $stats['consistencia']['alertas'][] = sprintf(
+                'Días planificados: %.2f de %.2f días totales', 
+                $stats['duracion_total'], $stats['dias_totales_proyecto']
+            );
+        }
         
         // Calcular progreso por fase
         foreach ($fases_info as &$fase_info) {
@@ -529,24 +802,40 @@ class Utils {
     }
     
     /**
-     * Distribuir peso automáticamente entre tareas
+     * MEJORADO: Distribuir peso automáticamente entre tareas basado en días totales
      */
-    public static function distribuirPesoAutomatico($tareas, $peso_total = 1.0, $metodo = 'equitativo') {
-        if (empty($tareas)) return $tareas;
+    public static function distribuirPesoAutomatico($tareas, $dias_totales_proyecto, $metodo = 'por_dias') {
+        if (empty($tareas) || $dias_totales_proyecto <= 0) return $tareas;
         
         switch ($metodo) {
+            case 'por_dias':
+                return self::distribuirPesoPorDiasTotales($tareas, $dias_totales_proyecto);
             case 'por_tipo':
-                return self::distribuirPesoPorTipo($tareas, $peso_total);
+                return self::distribuirPesoPorTipo($tareas, 100.0);
             case 'por_duracion':
-                return self::distribuirPesoPorDuracion($tareas, $peso_total);
+                return self::distribuirPesoPorDuracion($tareas, 100.0);
+            case 'por_fase':
+                return self::distribuirPesoPorFase($tareas, 100.0);
             case 'equitativo':
             default:
-                return self::distribuirPesoEquitativo($tareas, $peso_total);
+                return self::distribuirPesoEquitativo($tareas, 100.0);
         }
     }
     
     /**
-     * Distribuir peso equitativamente
+     * NUEVO: Distribuir peso basándose en días totales del proyecto
+     */
+    private static function distribuirPesoPorDiasTotales($tareas, $dias_totales_proyecto) {
+        foreach ($tareas as &$tarea) {
+            $duracion = floatval($tarea['duracion_dias']);
+            $tarea['peso_actividad'] = self::calcularPesoAutomatico($duracion, $dias_totales_proyecto);
+        }
+        
+        return $tareas;
+    }
+    
+    /**
+     * Distribuir peso equitativamente (cada tarea = 100% / total tareas)
      */
     private static function distribuirPesoEquitativo($tareas, $peso_total) {
         $peso_por_tarea = $peso_total / count($tareas);
@@ -559,13 +848,13 @@ class Utils {
     }
     
     /**
-     * Distribuir peso por tipo (Fase > Actividad > Tarea)
+     * CORREGIDO: Distribuir peso por tipo según análisis del Excel Cafeto
      */
     private static function distribuirPesoPorTipo($tareas, $peso_total) {
         $pesos_tipo = [
-            'Fase' => 0.5,      // 50% del peso total
-            'Actividad' => 0.3,  // 30% del peso total
-            'Tarea' => 0.2       // 20% del peso total
+            'Fase' => 20.0,      // 20% del peso total para fases
+            'Actividad' => 60.0,  // 60% del peso total para actividades
+            'Tarea' => 20.0       // 20% del peso total para tareas
         ];
         
         $conteo_tipos = ['Fase' => 0, 'Actividad' => 0, 'Tarea' => 0];
@@ -578,8 +867,43 @@ class Utils {
         // Asignar pesos
         foreach ($tareas as &$tarea) {
             $tipo = $tarea['tipo'];
-            $peso_tipo_total = $peso_total * $pesos_tipo[$tipo];
+            $peso_tipo_total = $pesos_tipo[$tipo];
             $tarea['peso_actividad'] = $conteo_tipos[$tipo] > 0 ? $peso_tipo_total / $conteo_tipos[$tipo] : 0;
+        }
+        
+        return $tareas;
+    }
+    
+    /**
+     * CORREGIDO: Distribuir peso por fase según el Excel Cafeto
+     */
+    private static function distribuirPesoPorFase($tareas, $peso_total) {
+        // Pesos según el análisis del Excel
+        $pesos_fases_cafeto = [
+            '1. Recepción de planos constructivos' => 1.0,
+            '2. Cotizaciones' => 84.0,
+            '3. Presupuesto Infraestructura' => 10.0,
+            '4. Presupuesto Casas' => 5.0
+        ];
+        
+        // Agrupar por fase
+        $tareas_por_fase = [];
+        foreach ($tareas as $tarea) {
+            $fase = $tarea['fase_principal'] ?? 'Sin fase';
+            if (!isset($tareas_por_fase[$fase])) {
+                $tareas_por_fase[$fase] = [];
+            }
+            $tareas_por_fase[$fase][] = &$tarea;
+        }
+        
+        // Distribuir peso por fase
+        foreach ($tareas_por_fase as $fase => $tareas_fase) {
+            $peso_fase = $pesos_fases_cafeto[$fase] ?? ($peso_total / count($tareas_por_fase));
+            $peso_por_tarea = $peso_fase / count($tareas_fase);
+            
+            foreach ($tareas_fase as &$tarea) {
+                $tarea['peso_actividad'] = $peso_por_tarea;
+            }
         }
         
         return $tareas;
@@ -596,7 +920,7 @@ class Utils {
         }
         
         foreach ($tareas as &$tarea) {
-            $proporcion = intval($tarea['duracion_dias']) / $duracion_total;
+            $proporcion = floatval($tarea['duracion_dias']) / $duracion_total;
             $tarea['peso_actividad'] = $peso_total * $proporcion;
         }
         
@@ -644,7 +968,7 @@ class Utils {
     }
     
     /**
-     * Obtener información del sistema
+     * Obtener información del sistema - MEJORADO
      */
     public static function infoSistema() {
         return [
@@ -655,7 +979,7 @@ class Utils {
             'tiempo_limite' => ini_get('max_execution_time'),
             'zona_horaria' => date_default_timezone_get(),
             'fecha_actual' => date('Y-m-d H:i:s'),
-            'version_sistema' => '2.0.0-peso-ponderado'
+            'version_sistema' => '2.1.0-dias-configurables' // ACTUALIZADO
         ];
     }
 }
@@ -695,21 +1019,75 @@ class ResponseHelper {
     }
     
     /**
-     * Respuesta con datos de progreso ponderado
+     * MEJORADO: Respuesta con datos de progreso ponderado EN PORCENTAJES e información de días
      */
-    public static function progressData($progreso_ponderado, $peso_total, $avance_total, $additional_data = []) {
+    public static function progressData($progreso_ponderado, $peso_total, $avance_total, $dias_info = [], $additional_data = []) {
         return json_encode([
             'success' => true,
-            'progreso_ponderado' => floatval($progreso_ponderado),
-            'peso_total' => floatval($peso_total),
-            'avance_total' => floatval($avance_total),
+            'progreso_ponderado' => floatval($progreso_ponderado), // Ya en porcentajes
+            'peso_total' => floatval($peso_total), // Ya en porcentajes
+            'avance_total' => floatval($avance_total), // Ya en porcentajes
+            'dias_info' => $dias_info, // NUEVO
             'data' => $additional_data,
+            'timestamp' => date('Y-m-d H:i:s')
+        ]);
+    }
+    
+    /**
+     * NUEVO: Respuesta especializada para operaciones de días
+     */
+    public static function diasOperationResponse($success, $message, $dias_afectados = 0, $tareas_afectadas = 0, $nuevo_peso_total = null) {
+        return json_encode([
+            'success' => $success,
+            'message' => $message,
+            'dias_afectados' => floatval($dias_afectados),
+            'tareas_afectadas' => intval($tareas_afectadas),
+            'nuevo_peso_total' => $nuevo_peso_total ? floatval($nuevo_peso_total) : null,
             'timestamp' => date('Y-m-d H:i:s')
         ]);
     }
 }
 
-// Funciones helper globales
+// ===== NUEVAS FUNCIONES HELPER GLOBALES =====
+
+if (!function_exists('calcularPesoAutomatico')) {
+    /**
+     * NUEVO: Calcular peso automático basado en días totales del proyecto
+     */
+    function calcularPesoAutomatico($duracion_dias, $dias_totales_proyecto) {
+        return Utils::calcularPesoAutomatico($duracion_dias, $dias_totales_proyecto);
+    }
+}
+
+if (!function_exists('formatearDias')) {
+    /**
+     * NUEVO: Formatear días con decimales
+     */
+    function formatearDias($dias, $mostrar_unidad = true) {
+        return Utils::formatearDias($dias, $mostrar_unidad);
+    }
+}
+
+if (!function_exists('validarDiasFraccionarios')) {
+    /**
+     * NUEVO: Validar entrada de días fraccionarios
+     */
+    function validarDiasFraccionarios($dias) {
+        return Validator::validarEntrada($dias, 'dias_fraccionarios');
+    }
+}
+
+if (!function_exists('colorPorPeso')) {
+    /**
+     * NUEVO: Color CSS basado en nivel de peso
+     */
+    function colorPorPeso($peso) {
+        return Utils::colorPorPeso($peso);
+    }
+}
+
+// ===== FUNCIONES HELPER GLOBALES EXISTENTES =====
+
 if (!function_exists('dd')) {
     /**
      * Dump and die para debugging
@@ -735,10 +1113,10 @@ if (!function_exists('formatearPorcentaje')) {
 
 if (!function_exists('formatearPeso')) {
     /**
-     * Formatear peso de actividad
+     * CORREGIDO: Formatear peso de actividad como porcentaje
      */
-    function formatearPeso($peso, $decimales = 4) {
-        return number_format(floatval($peso), $decimales, '.', '');
+    function formatearPeso($peso, $decimales = 2) {
+        return number_format(floatval($peso), $decimales, '.', '') . '%';
     }
 }
 
@@ -785,11 +1163,11 @@ if (!function_exists('generarColorPorTipo')) {
 
 if (!function_exists('validarPesoActividad')) {
     /**
-     * Validar que un peso de actividad esté en rango válido
+     * CORREGIDO: Validar que un peso de actividad esté en rango válido (0%-100%)
      */
     function validarPesoActividad($peso) {
         $peso_num = floatval($peso);
-        return $peso_num >= 0 && $peso_num <= 1;
+        return $peso_num >= 0 && $peso_num <= 100;
     }
 }
 ?>
