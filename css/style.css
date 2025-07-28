@@ -14,6 +14,18 @@
     --transition-fast: 0.2s ease;
     --transition-medium: 0.3s ease;
     --border-radius: 8px;
+    
+    /* NUEVAS: Variables para sistema de porcentajes */
+    --peso-sin-valor: #6c757d;
+    --peso-bajo: #28a745;
+    --peso-medio: #17a2b8;
+    --peso-alto: #ffc107;
+    --peso-critico: #dc3545;
+    --peso-perfecto: #20c997;
+    --gradient-peso: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-peso-success: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+    --gradient-peso-warning: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+    --gradient-peso-danger: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
 }
 
 /* Base styles */
@@ -50,19 +62,38 @@ body {
     font-weight: 600;
 }
 
-/* Progress bars */
+/* MEJORADO: Progress bars con mejor estilo para porcentajes */
 .progress {
-    height: 10px;
-    border-radius: 5px;
+    height: 12px;
+    border-radius: 6px;
     overflow: hidden;
     background-color: #e9ecef;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .progress-bar {
     background: linear-gradient(90deg, var(--success-color), var(--info-color));
-    transition: width 0.6s ease;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     font-size: 0.75rem;
-    line-height: 10px;
+    line-height: 12px;
+    font-weight: 600;
+    position: relative;
+}
+
+.progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    animation: progressShine 2s infinite ease-in-out;
+}
+
+@keyframes progressShine {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
 }
 
 .progress-bar.progress-animated {
@@ -74,13 +105,15 @@ body {
     100% { width: var(--progress-width); }
 }
 
-/* Badges para tipos */
+/* MEJORADO: Badges para tipos con gradientes específicos */
 .badge-fase {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     padding: 0.4rem 0.8rem;
     font-size: 0.75rem;
     font-weight: 600;
+    border-radius: 20px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .badge-actividad {
@@ -89,6 +122,8 @@ body {
     padding: 0.4rem 0.8rem;
     font-size: 0.75rem;
     font-weight: 600;
+    border-radius: 20px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .badge-tarea {
@@ -97,6 +132,8 @@ body {
     padding: 0.4rem 0.8rem;
     font-size: 0.75rem;
     font-weight: 600;
+    border-radius: 20px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 /* Estados con colores específicos */
@@ -362,27 +399,426 @@ body {
     border-left-color: var(--warning-color);
 }
 
-/* Peso de actividad styles */
+/* ========== SISTEMA DE PESO PONDERADO - ESTILOS ESPECÍFICOS ========== */
+
+/* NUEVOS: Badges de peso con colores según rango */
 .peso-badge {
-    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    font-family: 'Courier New', monospace;
+    font-family: 'Courier New', Monaco, monospace;
+    font-weight: 700;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
 }
 
+.peso-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Rangos de peso específicos */
+.peso-sin-valor {
+    background: linear-gradient(135deg, #95a5a6, #bdc3c7);
+    color: white;
+}
+
+.peso-bajo {
+    background: var(--gradient-peso-success);
+    color: white;
+}
+
+.peso-medio {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+}
+
+.peso-alto {
+    background: var(--gradient-peso-warning);
+    color: #2c3e50;
+}
+
+.peso-critico {
+    background: var(--gradient-peso-danger);
+    color: white;
+    animation: pulseWarning 2s infinite ease-in-out;
+}
+
+@keyframes pulseWarning {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.peso-perfecto {
+    background: linear-gradient(135deg, #00b894, #00cec9);
+    color: white;
+    box-shadow: 0 0 10px rgba(0, 184, 148, 0.3);
+}
+
+/* Input de peso mejorado */
 .peso-input {
-    font-family: 'Courier New', monospace;
-    font-weight: 600;
+    font-family: 'Courier New', Monaco, monospace;
+    font-weight: 700;
     text-align: center;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border: 2px solid #dee2e6;
+    border-radius: 12px;
+    transition: all var(--transition-medium);
 }
 
 .peso-input:focus {
-    border-color: #6c5ce7;
-    box-shadow: 0 0 0 0.2rem rgba(108, 92, 231, 0.25);
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    background: white;
+    transform: scale(1.02);
 }
+
+.peso-input.is-valid {
+    border-color: var(--success-color);
+    background: linear-gradient(135deg, #f8fff8, #e8f5e8);
+}
+
+.peso-input.is-warning {
+    border-color: var(--warning-color);
+    background: linear-gradient(135deg, #fffdf8, #fdf8e8);
+}
+
+.peso-input.is-invalid {
+    border-color: var(--danger-color);
+    background: linear-gradient(135deg, #fff8f8, #f8e8e8);
+}
+
+/* NUEVO: Indicador visual del peso total del proyecto */
+.peso-total-indicator {
+    position: relative;
+    background: white;
+    border-radius: 15px;
+    padding: 1rem;
+    box-shadow: var(--shadow-light);
+    border-left: 5px solid var(--secondary-color);
+    transition: all var(--transition-medium);
+}
+
+.peso-total-indicator:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-medium);
+}
+
+.peso-total-indicator.peso-correcto {
+    border-left-color: var(--success-color);
+    background: linear-gradient(135deg, #f8fff8, white);
+}
+
+.peso-total-indicator.peso-excedido {
+    border-left-color: var(--danger-color);
+    background: linear-gradient(135deg, #fff8f8, white);
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.peso-total-indicator.peso-insuficiente {
+    border-left-color: var(--warning-color);
+    background: linear-gradient(135deg, #fffdf8, white);
+}
+
+/* NUEVO: Barra de progreso del peso con diferentes estados */
+.peso-progress {
+    height: 20px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #e9ecef;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.peso-progress-bar {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 700;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.peso-progress-bar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: progressSlide 2s infinite ease-in-out;
+}
+
+@keyframes progressSlide {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.peso-progress-bar.peso-bajo { background: var(--gradient-peso-success); }
+.peso-progress-bar.peso-medio { background: linear-gradient(135deg, #3498db, #2980b9); }
+.peso-progress-bar.peso-alto { background: var(--gradient-peso-warning); }
+.peso-progress-bar.peso-excedido { background: var(--gradient-peso-danger); }
+.peso-progress-bar.peso-perfecto { 
+    background: linear-gradient(135deg, #00b894, #00cec9);
+    box-shadow: 0 0 20px rgba(0, 184, 148, 0.4);
+}
+
+/* NUEVO: Alertas específicas para peso */
+.alert-peso {
+    border: none;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    margin: 1rem 0;
+    font-weight: 500;
+    box-shadow: var(--shadow-light);
+    position: relative;
+    overflow: hidden;
+}
+
+.alert-peso::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: currentColor;
+}
+
+.alert-peso-success {
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    color: #155724;
+    border-left: 4px solid #28a745;
+}
+
+.alert-peso-warning {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    color: #856404;
+    border-left: 4px solid #ffc107;
+}
+
+.alert-peso-danger {
+    background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}
+
+.alert-peso-info {
+    background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+    color: #0c5460;
+    border-left: 4px solid #17a2b8;
+}
+
+/* NUEVO: Tooltip personalizado para peso */
+.peso-tooltip {
+    position: relative;
+    cursor: help;
+}
+
+.peso-tooltip::after {
+    content: attr(data-peso-info);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-fast);
+    z-index: 1000;
+    margin-bottom: 5px;
+}
+
+.peso-tooltip::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: rgba(0, 0, 0, 0.9);
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+    z-index: 1000;
+}
+
+.peso-tooltip:hover::after,
+.peso-tooltip:hover::before {
+    opacity: 1;
+}
+
+/* NUEVO: Cards de distribución de peso */
+.peso-distribution-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-medium);
+    border: 2px solid transparent;
+    transition: all var(--transition-medium);
+    position: relative;
+    overflow: hidden;
+}
+
+.peso-distribution-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-peso);
+}
+
+.peso-distribution-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-heavy);
+    border-color: rgba(102, 126, 234, 0.3);
+}
+
+.peso-distribution-card.selected {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #f8f9ff, white);
+}
+
+/* NUEVO: Selector de método de distribución */
+.metodo-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.metodo-option {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all var(--transition-medium);
+    text-align: center;
+}
+
+.metodo-option:hover {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #f8f9ff, white);
+    transform: translateY(-2px);
+}
+
+.metodo-option.selected {
+    border-color: #667eea;
+    background: var(--gradient-peso);
+    color: white;
+}
+
+.metodo-option .icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+/* NUEVO: Animación de entrada para elementos de peso */
+.peso-fade-in {
+    animation: pesoFadeIn 0.6s ease-out;
+}
+
+@keyframes pesoFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* NUEVO: Efectos de hover para badges de peso */
+.peso-badge-interactive {
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.peso-badge-interactive::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+}
+
+.peso-badge-interactive:hover::before {
+    width: 100%;
+    height: 100%;
+}
+
+/* NUEVO: Indicadores de validación mejorados */
+.peso-validation-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2rem;
+    opacity: 0;
+    transition: all var(--transition-fast);
+}
+
+.peso-input:focus + .peso-validation-icon {
+    opacity: 1;
+}
+
+.peso-validation-icon.valid {
+    color: var(--success-color);
+    animation: bounceIn 0.5s ease-out;
+}
+
+.peso-validation-icon.warning {
+    color: var(--warning-color);
+    animation: shake 0.5s ease-out;
+}
+
+.peso-validation-icon.invalid {
+    color: var(--danger-color);
+    animation: shake 0.5s ease-out;
+}
+
+@keyframes bounceIn {
+    0% { transform: translateY(-50%) scale(0); }
+    50% { transform: translateY(-50%) scale(1.2); }
+    100% { transform: translateY(-50%) scale(1); }
+}
+
+/* ========== FIN ESTILOS ESPECÍFICOS DE PESO ========== */
 
 /* Contrato badges */
 .contrato-normal {
@@ -445,24 +881,26 @@ body {
     font-weight: 500;
 }
 
-/* Notifications */
+/* MEJORADAS: Notifications con mejor diseño */
 .notification {
     position: fixed;
     top: 20px;
     right: 20px;
-    min-width: 320px;
-    max-width: 400px;
-    padding: 1rem 1.25rem;
-    border-radius: var(--border-radius);
+    min-width: 350px;
+    max-width: 450px;
+    padding: 1.25rem 1.5rem;
+    border-radius: 12px;
     color: white;
     font-weight: 500;
     z-index: 9999;
-    transform: translateX(100%);
-    transition: transform var(--transition-medium);
+    transform: translateX(120%);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: var(--shadow-heavy);
     display: flex;
-    align-items: center;
-    gap: 0.75rem;
+    align-items: flex-start;
+    gap: 1rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .notification.success {
@@ -473,6 +911,10 @@ body {
     background: linear-gradient(135deg, var(--danger-color), #c0392b);
 }
 
+.notification.warning {
+    background: linear-gradient(135deg, var(--warning-color), #e67e22);
+}
+
 .notification.info {
     background: linear-gradient(135deg, var(--info-color), var(--secondary-color));
 }
@@ -481,22 +923,48 @@ body {
     transform: translateX(0);
 }
 
-.notification i {
-    font-size: 1.2rem;
+.notification .notification-icon {
+    font-size: 1.3rem;
+    margin-top: 2px;
+    flex-shrink: 0;
 }
 
-.notification button {
+.notification .notification-content {
+    flex: 1;
+}
+
+.notification .notification-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.notification .notification-message {
+    font-weight: 400;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    white-space: pre-line;
+}
+
+.notification .notification-close {
     background: none;
     border: none;
     color: inherit;
     cursor: pointer;
-    margin-left: auto;
     padding: 0.25rem;
     border-radius: 50%;
     transition: background-color var(--transition-fast);
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
-.notification button:hover {
+.notification .notification-close:hover {
     background-color: rgba(255, 255, 255, 0.2);
 }
 
@@ -552,7 +1020,7 @@ body {
     }
 }
 
-/* Form improvements */
+/* MEJORADOS: Form improvements con estilos específicos para peso */
 .form-control:focus {
     border-color: var(--secondary-color);
     box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
@@ -569,11 +1037,43 @@ body {
 
 .form-range::-webkit-slider-thumb {
     background: var(--secondary-color);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: var(--shadow-light);
+    transition: all var(--transition-fast);
+}
+
+.form-range::-webkit-slider-thumb:hover {
+    background: var(--primary-color);
+    transform: scale(1.1);
 }
 
 .form-range::-moz-range-thumb {
     background: var(--secondary-color);
+    border: 2px solid white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    box-shadow: var(--shadow-light);
+}
+
+/* Input group mejorado para peso */
+.input-group-text {
+    font-weight: 700;
+    color: #495057;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
     border: none;
+    border-left: 2px solid #dee2e6;
+}
+
+.input-group-text.peso-symbol {
+    background: var(--gradient-peso);
+    color: white;
+    border-left: none;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
 }
 
 /* Navbar improvements */
@@ -699,6 +1199,20 @@ body {
     .table-responsive {
         font-size: 0.875rem;
     }
+    
+    /* NUEVO: Responsive para elementos de peso */
+    .metodo-selector {
+        grid-template-columns: 1fr;
+    }
+    
+    .peso-badge {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.6rem;
+    }
+    
+    .peso-input {
+        font-size: 1rem;
+    }
 }
 
 @media (max-width: 576px) {
@@ -731,6 +1245,10 @@ body {
     .modal-dialog {
         margin: 0.5rem;
     }
+    
+    .peso-distribution-card {
+        padding: 1rem;
+    }
 }
 
 /* Print styles */
@@ -739,7 +1257,9 @@ body {
     .btn,
     .modal,
     .notification,
-    .loading-overlay {
+    .loading-overlay,
+    .peso-tooltip::after,
+    .peso-tooltip::before {
         display: none !important;
     }
     
@@ -756,6 +1276,11 @@ body {
     .progress-bar {
         background: #6c757d !important;
     }
+    
+    .peso-badge {
+        background: #6c757d !important;
+        color: white !important;
+    }
 }
 
 /* High contrast mode */
@@ -768,6 +1293,10 @@ body {
         --danger-color: #cc0000;
         --light-bg: #ffffff;
         --border-color: #333;
+        --gradient-peso: #333;
+        --gradient-peso-success: #006600;
+        --gradient-peso-warning: #cc6600;
+        --gradient-peso-danger: #cc0000;
     }
     
     .card {
@@ -776,6 +1305,12 @@ body {
     
     .btn {
         border: 2px solid currentColor;
+    }
+    
+    .peso-badge {
+        background: #333 !important;
+        color: white !important;
+        border: 2px solid #666;
     }
 }
 
@@ -790,7 +1325,7 @@ body {
     }
 }
 
-/* Dark mode support */
+/* CORREGIDO: Dark mode support (eliminando la regla que forzaba tema claro) */
 @media (prefers-color-scheme: dark) {
     :root {
         --light-bg: #1a1a1a;
@@ -832,6 +1367,27 @@ body {
     .form-select:focus {
         background-color: #404040;
         border-color: var(--secondary-color);
+        color: #e0e0e0;
+    }
+    
+    .peso-input {
+        background: linear-gradient(135deg, #404040, #505050) !important;
+        color: #e0e0e0 !important;
+        border-color: #606060;
+    }
+    
+    .peso-input:focus {
+        background: #505050 !important;
+        border-color: #667eea;
+    }
+    
+    .peso-total-indicator {
+        background: #2d2d2d;
+        color: #e0e0e0;
+    }
+    
+    .peso-distribution-card {
+        background: #2d2d2d;
         color: #e0e0e0;
     }
 }
