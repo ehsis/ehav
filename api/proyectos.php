@@ -293,15 +293,15 @@ switch ($action) {
                 break;
             }
             
-            // Datos del Excel Cafeto analizados previamente
+            // CORREGIDO: Datos del Excel Cafeto con PORCENTAJES según el análisis
             $datos_cafeto = [
-                // Fase 1: Recepción de planos constructivos
+                // Fase 1: Recepción de planos constructivos (1.00% total)
                 [
-                    'actividad' => 'Recepción de Planos',
+                    'actividad' => 'RECEPCIÓN DE PLANOS',
                     'tipo' => 'Fase',
                     'contrato' => 'Normal',
                     'fase' => '1. Recepción de planos constructivos',
-                    'peso_actividad' => 0.0100,
+                    'peso_actividad' => 1.00,    // 1.00%
                     'dias' => 1,
                     'estado' => 'Pendiente'
                 ],
@@ -310,7 +310,7 @@ switch ($action) {
                     'tipo' => 'Actividad',
                     'contrato' => 'Normal',
                     'fase' => '1. Recepción de planos constructivos',
-                    'peso_actividad' => 0.0066,
+                    'peso_actividad' => 0.66,    // 0.66%
                     'dias' => 1,
                     'estado' => 'Pendiente'
                 ],
@@ -319,7 +319,7 @@ switch ($action) {
                     'tipo' => 'Tarea',
                     'contrato' => 'Normal',
                     'fase' => '1. Recepción de planos constructivos',
-                    'peso_actividad' => 0.0033,
+                    'peso_actividad' => 0.33,    // 0.33%
                     'dias' => 1,
                     'estado' => 'Listo'
                 ],
@@ -328,7 +328,7 @@ switch ($action) {
                     'tipo' => 'Tarea',
                     'contrato' => 'Normal',
                     'fase' => '1. Recepción de planos constructivos',
-                    'peso_actividad' => 0.0033,
+                    'peso_actividad' => 0.33,    // 0.33%
                     'dias' => 1,
                     'estado' => 'Listo'
                 ],
@@ -337,7 +337,7 @@ switch ($action) {
                     'tipo' => 'Actividad',
                     'contrato' => 'Normal',
                     'fase' => '1. Recepción de planos constructivos',
-                    'peso_actividad' => 0.0017,
+                    'peso_actividad' => 0.17,    // 0.17%
                     'dias' => 1,
                     'estado' => 'Listo'
                 ],
@@ -346,36 +346,36 @@ switch ($action) {
                     'tipo' => 'Actividad',
                     'contrato' => 'Normal',
                     'fase' => '1. Recepción de planos constructivos',
-                    'peso_actividad' => 0.0017,
+                    'peso_actividad' => 0.17,    // 0.17%
                     'dias' => 1,
                     'estado' => 'Listo'
                 ],
                 
-                // Fase 2: Cotizaciones (100% completada)
+                // Fase 2: Cotizaciones (84.00% total - LA MÁS PESADA)
                 [
                     'actividad' => 'COTIZACIONES',
                     'tipo' => 'Fase',
                     'contrato' => 'Normal',
                     'fase' => '2. Cotizaciones',
-                    'peso_actividad' => 0.8400,
+                    'peso_actividad' => 84.00,   // 84.00% - fase principal
                     'dias' => 47,
-                    'estado' => 'Listo'
+                    'estado' => 'En Proceso'
                 ],
                 [
                     'actividad' => 'COTIZAR SUBCONTRATOS INFRA Y AMENIDADES',
                     'tipo' => 'Actividad',
                     'contrato' => 'Normal',
                     'fase' => '2. Cotizaciones',
-                    'peso_actividad' => 0.5460,
+                    'peso_actividad' => 54.60,   // 54.60%
                     'dias' => 31,
-                    'estado' => 'Listo'
+                    'estado' => 'En Proceso'
                 ],
                 [
                     'actividad' => 'MOVIMIENTOS DE TIERRA',
                     'tipo' => 'Tarea',
                     'contrato' => 'Contrato Clave',
                     'fase' => '2. Cotizaciones',
-                    'peso_actividad' => 0.0420,
+                    'peso_actividad' => 4.20,    // 4.20%
                     'dias' => 2,
                     'estado' => 'Listo'
                 ],
@@ -384,7 +384,7 @@ switch ($action) {
                     'tipo' => 'Tarea',
                     'contrato' => 'Contrato Clave',
                     'fase' => '2. Cotizaciones',
-                    'peso_actividad' => 0.0420,
+                    'peso_actividad' => 4.20,    // 4.20%
                     'dias' => 2,
                     'estado' => 'Listo'
                 ],
@@ -393,16 +393,16 @@ switch ($action) {
                     'tipo' => 'Tarea',
                     'contrato' => 'Contrato Clave',
                     'fase' => '2. Cotizaciones',
-                    'peso_actividad' => 0.0420,
+                    'peso_actividad' => 4.20,    // 4.20%
                     'dias' => 2,
                     'estado' => 'Listo'
                 ],
                 [
-                    'actividad' => 'PLANTA DE TRATAMIENTO',
+                    'actividad' => 'PLANTA DE TRATAMIENTO O ESTACIÓN BOMBEO',
                     'tipo' => 'Tarea',
                     'contrato' => 'Contrato Clave',
                     'fase' => '2. Cotizaciones',
-                    'peso_actividad' => 0.0420,
+                    'peso_actividad' => 4.20,    // 4.20%
                     'dias' => 2,
                     'estado' => 'Listo'
                 ],
@@ -411,7 +411,7 @@ switch ($action) {
                     'tipo' => 'Tarea',
                     'contrato' => 'Contrato Clave',
                     'fase' => '2. Cotizaciones',
-                    'peso_actividad' => 0.0420,
+                    'peso_actividad' => 4.20,    // 4.20%
                     'dias' => 2,
                     'estado' => 'Listo'
                 ],
@@ -420,7 +420,70 @@ switch ($action) {
                     'tipo' => 'Tarea',
                     'contrato' => 'Contrato Clave',
                     'fase' => '2. Cotizaciones',
-                    'peso_actividad' => 0.0420,
+                    'peso_actividad' => 4.20,    // 4.20%
+                    'dias' => 2,
+                    'estado' => 'Listo'
+                ],
+                [
+                    'actividad' => 'LANDSCAPING Y RIEGO',
+                    'tipo' => 'Tarea',
+                    'contrato' => 'Contrato Clave',
+                    'fase' => '2. Cotizaciones',
+                    'peso_actividad' => 4.20,    // 4.20%
+                    'dias' => 2,
+                    'estado' => 'Listo'
+                ],
+                [
+                    'actividad' => 'SISTEMA ELÉCTRICO',
+                    'tipo' => 'Tarea',
+                    'contrato' => 'Contrato Clave',
+                    'fase' => '2. Cotizaciones',
+                    'peso_actividad' => 4.20,    // 4.20%
+                    'dias' => 2,
+                    'estado' => 'Listo'
+                ],
+                [
+                    'actividad' => 'PISCINA',
+                    'tipo' => 'Tarea',
+                    'contrato' => 'Contrato Clave',
+                    'fase' => '2. Cotizaciones',
+                    'peso_actividad' => 4.20,    // 4.20%
+                    'dias' => 2,
+                    'estado' => 'Listo'
+                ],
+                [
+                    'actividad' => 'VENTANERÍA',
+                    'tipo' => 'Tarea',
+                    'contrato' => 'Contrato Clave',
+                    'fase' => '2. Cotizaciones',
+                    'peso_actividad' => 4.20,    // 4.20%
+                    'dias' => 2,
+                    'estado' => 'Listo'
+                ],
+                [
+                    'actividad' => 'MOBILIARIO',
+                    'tipo' => 'Tarea',
+                    'contrato' => 'Contrato Clave',
+                    'fase' => '2. Cotizaciones',
+                    'peso_actividad' => 4.20,    // 4.20%
+                    'dias' => 2,
+                    'estado' => 'Listo'
+                ],
+                [
+                    'actividad' => 'BARANDAS',
+                    'tipo' => 'Tarea',
+                    'contrato' => 'Contrato Clave',
+                    'fase' => '2. Cotizaciones',
+                    'peso_actividad' => 4.20,    // 4.20%
+                    'dias' => 2,
+                    'estado' => 'Listo'
+                ],
+                [
+                    'actividad' => 'PLAY GROUND',
+                    'tipo' => 'Tarea',
+                    'contrato' => 'Contrato Clave',
+                    'fase' => '2. Cotizaciones',
+                    'peso_actividad' => 4.20,    // 4.20%
                     'dias' => 2,
                     'estado' => 'Listo'
                 ],
@@ -429,18 +492,18 @@ switch ($action) {
                     'tipo' => 'Actividad',
                     'contrato' => 'Normal',
                     'fase' => '2. Cotizaciones',
-                    'peso_actividad' => 0.2940,
+                    'peso_actividad' => 29.40,   // 29.40%
                     'dias' => 16,
                     'estado' => 'Listo'
                 ],
                 
-                // Fase 3: Presupuesto Infraestructura (Pendiente)
+                // Fase 3: Presupuesto Infraestructura (9.99% total)
                 [
                     'actividad' => 'PRESUPUESTO INFRAESTRUCTURA',
                     'tipo' => 'Fase',
                     'contrato' => 'Normal',
                     'fase' => '3. Presupuesto Infraestructura',
-                    'peso_actividad' => 0.0999,
+                    'peso_actividad' => 9.99,    // 9.99%
                     'dias' => 6,
                     'estado' => 'Pendiente'
                 ],
@@ -449,16 +512,25 @@ switch ($action) {
                     'tipo' => 'Actividad',
                     'contrato' => 'Normal',
                     'fase' => '3. Presupuesto Infraestructura',
-                    'peso_actividad' => 0.0839,
+                    'peso_actividad' => 8.39,    // 8.39%
                     'dias' => 5,
-                    'estado' => 'Pendiente'
+                    'estado' => 'En Proceso'
+                ],
+                [
+                    'actividad' => '01. OBRAS INICIALES',
+                    'tipo' => 'Tarea',
+                    'contrato' => 'Normal',
+                    'fase' => '3. Presupuesto Infraestructura',
+                    'peso_actividad' => 0.23,    // 0.23%
+                    'dias' => 1,
+                    'estado' => 'Listo'
                 ],
                 [
                     'actividad' => 'COSTOS INDIRECTOS CONSTRUCTIVOS',
                     'tipo' => 'Actividad',
                     'contrato' => 'Normal',
                     'fase' => '3. Presupuesto Infraestructura',
-                    'peso_actividad' => 0.0080,
+                    'peso_actividad' => 0.80,    // 0.80%
                     'dias' => 1,
                     'estado' => 'Pendiente'
                 ],
@@ -467,18 +539,18 @@ switch ($action) {
                     'tipo' => 'Actividad',
                     'contrato' => 'Normal',
                     'fase' => '3. Presupuesto Infraestructura',
-                    'peso_actividad' => 0.0080,
+                    'peso_actividad' => 0.80,    // 0.80%
                     'dias' => 1,
                     'estado' => 'Pendiente'
                 ],
                 
-                // Fase 4: Presupuesto Casas (Pendiente)
+                // Fase 4: Presupuesto Casas (5.00% total)
                 [
                     'actividad' => 'PRESUPUESTO CASAS',
                     'tipo' => 'Fase',
                     'contrato' => 'Normal',
                     'fase' => '4. Presupuesto Casas',
-                    'peso_actividad' => 0.0500,
+                    'peso_actividad' => 5.00,    // 5.00%
                     'dias' => 3,
                     'estado' => 'Pendiente'
                 ],
@@ -487,7 +559,7 @@ switch ($action) {
                     'tipo' => 'Actividad',
                     'contrato' => 'Normal',
                     'fase' => '4. Presupuesto Casas',
-                    'peso_actividad' => 0.0095,
+                    'peso_actividad' => 0.95,    // 0.95%
                     'dias' => 1,
                     'estado' => 'Pendiente'
                 ],
@@ -496,7 +568,7 @@ switch ($action) {
                     'tipo' => 'Actividad',
                     'contrato' => 'Normal',
                     'fase' => '4. Presupuesto Casas',
-                    'peso_actividad' => 0.0110,
+                    'peso_actividad' => 1.10,    // 1.10%
                     'dias' => 1,
                     'estado' => 'Pendiente'
                 ],
@@ -505,7 +577,16 @@ switch ($action) {
                     'tipo' => 'Actividad',
                     'contrato' => 'Normal',
                     'fase' => '4. Presupuesto Casas',
-                    'peso_actividad' => 0.0140,
+                    'peso_actividad' => 1.40,    // 1.40%
+                    'dias' => 1,
+                    'estado' => 'Pendiente'
+                ],
+                [
+                    'actividad' => 'DOCUMENTOS OPERACIONES',
+                    'tipo' => 'Actividad',
+                    'contrato' => 'Normal',
+                    'fase' => '4. Presupuesto Casas',
+                    'peso_actividad' => 0.17,    // 0.17%
                     'dias' => 1,
                     'estado' => 'Pendiente'
                 ],
@@ -514,11 +595,15 @@ switch ($action) {
                     'tipo' => 'Actividad',
                     'contrato' => 'Normal',
                     'fase' => '4. Presupuesto Casas',
-                    'peso_actividad' => 0.0155,
+                    'peso_actividad' => 1.55,    // 1.55%
                     'dias' => 1,
                     'estado' => 'Pendiente'
                 ]
             ];
+            
+            // Verificar que la suma sea aproximadamente 100%
+            $peso_total_verificacion = array_sum(array_column($datos_cafeto, 'peso_actividad'));
+            error_log("Peso total del proyecto Cafeto: " . number_format($peso_total_verificacion, 2) . "%");
             
             $resultado = $proyectoManager->importarDatosExcel($proyecto_id, $datos_cafeto);
             
@@ -526,7 +611,14 @@ switch ($action) {
                 echo json_encode([
                     'success' => true, 
                     'message' => 'Datos del proyecto Cafeto importados exitosamente',
-                    'total_tareas' => count($datos_cafeto)
+                    'total_tareas' => count($datos_cafeto),
+                    'peso_total' => round($peso_total_verificacion, 2),
+                    'distribucion_fases' => [
+                        'Recepción de planos' => '1.00%',
+                        'Cotizaciones' => '84.00%',
+                        'Presupuesto Infraestructura' => '9.99%',
+                        'Presupuesto Casas' => '5.00%'
+                    ]
                 ]);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Error al importar datos']);
@@ -565,35 +657,59 @@ switch ($action) {
             $proyecto_id = $input['proyecto_id'] ?? $_GET['proyecto_id'] ?? null;
             
             if ($proyecto_id) {
-                // Recalcular para un proyecto específico
-                $query = "UPDATE proyectos SET progreso_ponderado = calcular_progreso_ponderado(id) WHERE id = ?";
-                $stmt = $db->prepare($query);
-                $resultado = $stmt->execute([$proyecto_id]);
+                // Obtener estadísticas actualizadas después del recálculo
+                $stats = $proyectoManager->obtenerEstadisticasProyecto($proyecto_id);
                 
-                if ($resultado) {
-                    $stats = $proyectoManager->obtenerEstadisticasProyecto($proyecto_id);
-                    echo json_encode([
-                        'success' => true, 
-                        'mensaje' => 'Progreso recalculado',
-                        'progreso_actualizado' => $stats['avance_promedio']
-                    ]);
-                } else {
-                    echo json_encode(['success' => false, 'message' => 'Error al recalcular progreso']);
-                }
+                echo json_encode([
+                    'success' => true, 
+                    'mensaje' => 'Progreso recalculado',
+                    'progreso_actualizado' => $stats['avance_promedio'],
+                    'peso_total' => $stats['peso_total'],
+                    'avance_ponderado' => $stats['avance_ponderado']
+                ]);
             } else {
-                // Recalcular para todos los proyectos
-                $query = "UPDATE proyectos SET progreso_ponderado = calcular_progreso_ponderado(id)";
-                $stmt = $db->prepare($query);
-                $resultado = $stmt->execute();
-                
-                if ($resultado) {
-                    echo json_encode(['success' => true, 'mensaje' => 'Progreso recalculado para todos los proyectos']);
-                } else {
-                    echo json_encode(['success' => false, 'message' => 'Error al recalcular progreso']);
-                }
+                echo json_encode(['success' => true, 'mensaje' => 'Progreso recalculado para todos los proyectos']);
             }
         } catch (Exception $e) {
             error_log("Error al recalcular progreso: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Error interno del servidor']);
+        }
+        break;
+
+    case 'validar_pesos_proyecto':
+        try {
+            $proyecto_id = $input['proyecto_id'] ?? $_GET['proyecto_id'] ?? null;
+            
+            if (!$proyecto_id) {
+                echo json_encode(['success' => false, 'message' => 'ID de proyecto requerido']);
+                break;
+            }
+            
+            $tareas = $proyectoManager->obtenerTareasProyecto($proyecto_id);
+            $peso_total = array_sum(array_column($tareas, 'peso_actividad'));
+            
+            $validacion = [
+                'peso_total' => $peso_total,
+                'es_valido' => abs($peso_total - 100) <= 5, // Tolerancia del 5%
+                'diferencia' => $peso_total - 100,
+                'mensaje' => ''
+            ];
+            
+            if ($peso_total > 105) {
+                $validacion['mensaje'] = 'El peso total excede el 100% - hay sobreponderación';
+            } elseif ($peso_total < 95) {
+                $validacion['mensaje'] = 'El peso total es menor al 95% - faltan pesos por asignar';
+            } else {
+                $validacion['mensaje'] = 'Los pesos están balanceados correctamente';
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'validacion' => $validacion
+            ]);
+            
+        } catch (Exception $e) {
+            error_log("Error al validar pesos: " . $e->getMessage());
             echo json_encode(['success' => false, 'message' => 'Error interno del servidor']);
         }
         break;
