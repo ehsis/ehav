@@ -60,9 +60,8 @@ if ($proyecto_actual_id && isset($db)) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"
           integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous">
     
-    <!-- Chart.js for graphs - VERSIÓN CORREGIDA -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js" 
-            integrity="sha384-7lePLdO2QqVGvEE8XjcpFwEOgf71MSyGIDOCJeGqeNaY9X8R8zWqd5nfJWxq93j6" crossorigin="anonymous"></script>
+    <!-- Chart.js for graphs - CORREGIDO SIN INTEGRITY -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
     
     <!-- Custom CSS -->
     <link href="css/style.css" rel="stylesheet">
@@ -550,7 +549,7 @@ if ($proyecto_actual_id && isset($db)) {
             if (modal) {
                 const bootstrapModal = new bootstrap.Modal(modal);
                 bootstrapModal.show();
-            } else {
+            } else if (typeof mostrarNotificacion !== 'undefined') {
                 mostrarNotificacion('Modal de nueva tarea no encontrado', 'error');
             }
         }
@@ -560,7 +559,7 @@ if ($proyecto_actual_id && isset($db)) {
             if (modal) {
                 const bootstrapModal = new bootstrap.Modal(modal);
                 bootstrapModal.show();
-            } else {
+            } else if (typeof mostrarNotificacion !== 'undefined') {
                 mostrarNotificacion('Modal de nuevo proyecto no encontrado', 'error');
             }
         }
